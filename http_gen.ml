@@ -3,36 +3,6 @@ open Crowbar
 
 let empty = const ""
 
-(* regex: ?s <=> zero or one time s *)
-let optional s =
-  choose [empty; s]
-
-(* Basic types *)
-let octet = bytes_fixed 8
-let char_t = map [range 128] (fun n -> String.make 1 (Char.chr n))
-let upalpha = choose [const "A"; const "B"; const "C"; const "D"; const "E";
-  const "F"; const "G"; const "H"; const "I"; const "J"; const "K"; const "L";
-  const "M"; const "N"; const "O"; const "P"; const "Q"; const "R"; const "S";
-  const "T"; const "U"; const "V"; const "W"; const "X"; const "Y"; const "Z"]
-let loalpha = choose [const "a"; const "b"; const "c"; const "d"; const "e";
-  const "f"; const "g"; const "h"; const "i"; const "j"; const "k"; const "l";
-  const "m"; const "n"; const "o"; const "p"; const "q"; const "r"; const "s";
-  const "t"; const "u"; const "v"; const "w"; const "x"; const "y"; const "z"]
-let alpha = choose [upalpha; loalpha]
-let digit = choose [const "0"; const "1"; const "2"; const "3"; const "4";
-  const "5"; const "6"; const "7"; const "8"; const "9"]
-let ctl = map [choose [range 32; const 127]] (fun n -> Char.chr n |> (String.make 1))
-
-(* (Char.chr |> (String.make 1)) *)
-let cr = const "\r" (* <=> map [const 13] Char.chr exept it is a string*)
-let lf = const "\n" (* 10 *)
-let sp = const " " (* 32 *)
-let ht = const "\t" (* 9 *)
-let dblquote = const "\"" (* 34 *)
-
-let crlf = const "\r\n"
-let port = map [range 65536] string_of_int
-
 (* concatenate a List of string gen inserting the separator string sep between each *)
 let concat_gen_list sep l =
   List.fold_left (fun acc e ->
@@ -52,13 +22,46 @@ let list_gen_sized n gen =
 let concat_list_gen sep l =
   map [sep; l] String.concat
 
+(* regex: ?s <=> zero or one time s *)
+let optional s =
+  choose [empty; s]
+
+(* Basic types *)
+let octet = bytes_fixed 8
+let char_t = map [range 128] (fun n -> String.make 1 (Char.chr n))
+let upalpha = map [range 26] (fun n -> Char.chr (n + 65) |> String.make 1)
+let loalpha = map [range 26] (fun n -> Char.chr (n + 97) |> String.make 1)
+let alpha = choose [upalpha; loalpha]
+let digit = map [range 10] (fun n -> Char.chr (n + 48) |> String.make 1)
+let ctl =
+  map [choose [range 32; const 127]] (fun n -> Char.chr n |> (String.make 1))
+
+(* (Char.chr |> (String.make 1)) *)
+let cr = const "\r" (* <=> map [const 13] Char.chr exept it is a string*)
+let lf = const "\n" (* 10 *)
+let sp = const " " (* 32 *)
+let ht = const "\t" (* 9 *)
+let dblquote = const "\"" (* 34 *)
+
+let crlf = const "\r\n"
+let port = map [range 65536] string_of_int
+
 (* linear white space : [CRLF] 1*( SP | HT ) *)
 let lws = map [(optional crlf); (list1 (choose [sp; ht]))] String.concat
 let lws_star = concat_list_gen empty (list lws) (* regex: *lws *)
 let word_sep = concat_list_gen empty (list1 lws)
 
 (* any OCTET except CTLs, but including LWS*)
-let text = "#text#" (* TODO: use guards or do select the ranges allowed *)
+let text =
+  let octet = map [octet] (fun str ->
+    let b = Bytes.create 8 in
+    Bytes.blit_string str 0 b 0 8;
+    Bytes.iter (fun c -> let code = Char.code c in
+      guard (code > 32 && code != 127)) b;
+    str
+  ) in
+  choose [lws; octet]
+
 let hex = choose [digit; const "A"; const "B"; const "C"; const "D"; const "E";
   const "F"; digit; const "a"; const "b"; const "c"; const "d"; const "e";
   const "f"]
@@ -79,6 +82,9 @@ let separators = choose [const "("; const ")"; const "<"; const ">"; const "@";
   const "]"; const "?"; const "="; const "{"; const "}"; sp; ht]
 
 let quoted_pair = concat_gen_list lws_star [const "\\"; char_t]
+(*let qdtext =
+  let a = map [text] () *)
+
 let qdtext = const "#qdtext#" (* all but "\"" *)
 let ctext = const "#ctext#"
 let quoted_string = concat_gen_list lws_star [
@@ -235,7 +241,7 @@ let request = (* Section 5 *)
 let http_message = request (* We are only interested in requests not responses *)
 
 let http =
-  choose [token]
+  choose [http_message]
 
 let expected_http_output = "\r"
 
