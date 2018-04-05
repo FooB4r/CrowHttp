@@ -6,6 +6,7 @@
 *.o
 *.cmx
 *.cmxs
+*.merlin
 *.cmxa
 
 # ocamlbuild working directory
