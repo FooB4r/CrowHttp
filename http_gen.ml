@@ -33,6 +33,7 @@ let upalpha = map [range 26] (fun n -> Char.chr (n + 65) |> String.make 1)
 let loalpha = map [range 26] (fun n -> Char.chr (n + 97) |> String.make 1)
 let alpha = choose [upalpha; loalpha]
 let digit = map [range 10] (fun n -> Char.chr (n + 48) |> String.make 1)
+let number = concat_list_gen empty (list1 digit)
 let ctl =
   map [choose [range 32; const 127]] (fun n -> Char.chr n |> (String.make 1))
 let cr = const "\r" (* <=> map [const 13] Char.chr exept it is a string*)
@@ -40,7 +41,6 @@ let lf = const "\n" (* 10 *)
 let sp = const " " (* 32 *)
 let ht = const "\t" (* 9 *)
 let dblquote = const "\"" (* 34 *)
-
 let crlf = const "\r\n"
 let port = map [range 65536] string_of_int
 
@@ -52,10 +52,8 @@ let word_sep = concat_list_gen empty (list1 lws)
 (* any OCTET except CTLs, but including LWS*)
 let text =
   let octet = map [octet] (fun str ->
-    let b = Bytes.create 8 in
-    Bytes.blit_string str 0 b 0 8;
-    Bytes.iter (fun c -> let code = Char.code c in
-      guard (code > 32 && code != 127)) b;
+    String.iter (fun c -> let code = Char.code c in
+      guard (code > 32 && code != 127)) str;
     str
   ) in
   choose [lws; octet]
@@ -93,15 +91,12 @@ let quoted_string = concat_gen_list lws_star [
   ]
 let comment = concat_gen_list lws_star [
     const "(";
-    concat_list_gen lws_star (list(choose [ctext; quoted_pair]));
+    concat_list_gen lws_star (list(choose [ctext; quoted_pair])); (*rec comment ?*)
     const ")"
   ]
 
-
 let http_version =
-  concat_gen_list lws_star [const "HTTP"; const "/";
-  concat_list_gen empty (list1 digit);
-  const "."; concat_list_gen empty (list1 digit)]
+  concat_gen_list lws_star [const "HTTP"; const "/"; number; const "."; number]
 (* let http_version = const "HTTP/1.1" *)
 
 let uri = const "#URI#" (*TODO read rfc on URIs + 3.2.3 URI Comparison ?? *)
@@ -113,10 +108,16 @@ let asctime_date = const "Sun Nov  6 08:49:37 1994"
 let date = choose [rfc1123_date; rfc850_date; asctime_date]
 
 
-let gh_cache_control = const "#gh_cache_control#"
-let gh_connection = choose [const "Close"; const "Keep-Alive"]
-let gh_date = date
-let gh_pragma = const "#gh_pragma#"
+(*  Make a http header called <name> with <content> as a content *)
+(* string -> string gen list -> string gen *)
+let make_header name content =
+  concat_gen_list lws_star [const name; const ":"; content]
+
+let gh_cache_control = make_header "Cache-Control" (const "no-cache")
+let gh_connection = make_header "Connection"
+  (choose [const "Close"; const "Keep-Alive"])
+let gh_date = make_header "Date" date
+let gh_pragma = make_header "Pragma" (const "no-cache")
 let gh_trailer = const "#gh_trailer#"
 let gh_transfer_encoding = const "#gh_transfer_encoding#"
 let gh_upgrade = const "#gh_upgrade#"
@@ -128,7 +129,7 @@ let general_header = choose [
   gh_connection;               (* Section 14.10 *)
   gh_date;                     (* Section 14.18 *)
   gh_pragma;                   (* Section 14.32 *)
-  gh_trailer;                  (* Section 14.40 *)
+  gh_trailer;                  (* Section 14.40 *) (* useless *)
   gh_transfer_encoding;        (* Section 14.41 *)
   gh_upgrade;                  (* Section 14.42 *)
   gh_via;                      (* Section 14.45 *)
@@ -142,26 +143,20 @@ let rh_accept_language = const "#rh_accept_language#"
 let rh_authorization = const "#rh_authorization#"
 let rh_expect = const "#rh_expect#"
 let rh_from = const "#rh_from#"
-let rh_host = concat_gen_list lws_star [
-    const "Host"; const ":"; const "www.w3.org";
-    optional (concat_gen_list lws_star [const ":"; port])
-  ]
+let rh_host = make_header "Host" (concat_gen_list lws_star
+  [const "www.w3.org"; optional (concat_gen_list lws_star [const ":"; port])])
 let rh_if_match = const "#rh_if_match#"
 let rh_if_modified_since = const "#rh_if_modified_since#"
 let rh_if_none_match = const "#rh_if_none_match#"
 let rh_if_range = const "#rh_if_range#"
 let rh_if_unmodified_since = const "#rh_if_unmodified_since#"
-let rh_max_forwards = concat_gen_list lws_star [
-    const "Max-Fowards"; const ":"; concat_list_gen empty (list1 digit)
-  ]
+let rh_max_forwards = make_header "Max-Fowards" number
 let rh_proxy_authorization = const "#rh_proxy_authorization#"
 let rh_range = const "#rh_range#"
 let rh_referer = const "#rh_referer#"
 let rh_te = const "#rh_te#"
-let rh_user_agent = concat_gen_list lws_star [
-    const "User-Agent"; const ":";
-    concat_list_gen lws_star (list1 (choose [product; comment]))
-  ]
+let rh_user_agent = make_header "User-Agent"
+  (concat_list_gen lws_star (list1 (choose [product; comment])))
 
 let request_header = choose [
   rh_accept;
