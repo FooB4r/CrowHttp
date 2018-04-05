@@ -113,53 +113,56 @@ let date = choose [rfc1123_date; rfc850_date; asctime_date]
 let make_header name content =
   concat_gen_list lws_star [const name; const ":"; content]
 
+(* /!\ MOST OF THE RULES ARE SIMPLIFIED /!\ *)
 let gh_cache_control = make_header "Cache-Control" (const "no-cache")
 let gh_connection = make_header "Connection"
   (choose [const "Close"; const "Keep-Alive"])
 let gh_date = make_header "Date" date
 let gh_pragma = make_header "Pragma" (const "no-cache")
-let gh_trailer = const "#gh_trailer#"
-let gh_transfer_encoding = const "#gh_transfer_encoding#"
-let gh_upgrade = const "#gh_upgrade#"
-let gh_via = const "#gh_via#"
-let gh_warning = const "#gh_warning#"
+(* let gh_trailer = const "#gh_trailer#" *)
+(* let gh_transfer_encoding = const "#gh_transfer_encoding#" *)
+(* let gh_upgrade = const "#gh_upgrade#" *)
+let gh_via = make_header "Via" (concat_gen_list lws_star
+  [http_version; token; const "pseudonym"]) (* simplified *)
+let gh_warning = make_header "Warning" (const "299 pseudo \"warn-text\"") (* simplified *)
 
 let general_header = choose [
   gh_cache_control;            (* Section 14.9 *)
   gh_connection;               (* Section 14.10 *)
   gh_date;                     (* Section 14.18 *)
   gh_pragma;                   (* Section 14.32 *)
-  gh_trailer;                  (* Section 14.40 *) (* useless *)
-  gh_transfer_encoding;        (* Section 14.41 *)
-  gh_upgrade;                  (* Section 14.42 *)
+  (* gh_trailer;                  (* Section 14.40 *) (* useless *) *)
+  (* gh_transfer_encoding;        (* Section 14.41 *) *)
+  (* gh_upgrade;                  (* Section 14.42 *) *)
   gh_via;                      (* Section 14.45 *)
   gh_warning                   (* Section 14.46 *)
 ]
 
-let rh_accept = const "#rh_accept#"
-let rh_accept_charset = const "#rh_accept_charset#"
-let rh_accept_encoding = const "#rh_accept_encoding#"
-let rh_accept_language = const "#rh_accept_language#"
-let rh_authorization = const "#rh_authorization#"
-let rh_expect = const "#rh_expect#"
-let rh_from = const "#rh_from#"
+let rh_accept = make_header "Accept"
+  (const "text/*, text/html, text/html;level=1, */*")
+let rh_accept_charset = make_header "Accept-Charset" (const "iso-8859-5")
+let rh_accept_encoding = make_header "Accept-Encoding" (const "compress, gzip")
+let rh_accept_language = make_header "Accept-Language" (const "da, en-gb;q=0.8, en;q=0.7")
+let rh_authorization = make_header "Authorization" token
+let rh_expect = make_header "Expect" (const "100-continue")
+let rh_from = make_header "From" (const "webmaster@w3.org")
 let rh_host = make_header "Host" (concat_gen_list lws_star
   [const "www.w3.org"; optional (concat_gen_list lws_star [const ":"; port])])
-let rh_if_match = const "#rh_if_match#"
-let rh_if_modified_since = const "#rh_if_modified_since#"
-let rh_if_none_match = const "#rh_if_none_match#"
-let rh_if_range = const "#rh_if_range#"
-let rh_if_unmodified_since = const "#rh_if_unmodified_since#"
+let rh_if_match = make_header "If-Match" (const "*")
+let rh_if_modified_since = make_header "If-Modifier-Since" date
+let rh_if_none_match = make_header "If-None-Match" (const "*")
+let rh_if_range = make_header "If-Range" date
+let rh_if_unmodified_since = make_header "If-Unmodified-Since" date
 let rh_max_forwards = make_header "Max-Fowards" number
-let rh_proxy_authorization = const "#rh_proxy_authorization#"
-let rh_range = const "#rh_range#"
-let rh_referer = const "#rh_referer#"
-let rh_te = const "#rh_te#"
+let rh_proxy_authorization = make_header "Proxy-Authorization" token
+(* let rh_range = const "#rh_range#"  *)
+let rh_referer = make_header "Referer" uri
+(* let rh_te = const "#rh_te#" *)
 let rh_user_agent = make_header "User-Agent"
   (concat_list_gen lws_star (list1 (choose [product; comment])))
 
 let request_header = choose [
-  rh_accept;
+  (* rh_accept;                 (* Section 14.1 *) *)
   rh_accept_charset;         (* Section 14.2 *)
   rh_accept_encoding;        (* Section 14.3 *)
   rh_accept_language;        (* Section 14.4 *)
@@ -174,36 +177,37 @@ let request_header = choose [
   rh_if_unmodified_since;    (* Section 14.28 *)
   rh_max_forwards;           (* Section 14.31 *)
   rh_proxy_authorization;    (* Section 14.34 *)
-  rh_range;                  (* Section 14.35 *)
+  (* rh_range;                  (* Section 14.35 *) *)
   rh_referer;                (* Section 14.36 *)
-  rh_te;                     (* Section 14.39 *)
+  (* rh_te;                     (* Section 14.39 *) *)
   rh_user_agent              (* Section 14.43 *)
 ]
 
-let eh_allow = const "#eh_allow#"
-let eh_content_encoding = const "#eh_content_encoding#"
-let eh_content_language = const "#eh_content_language#"
-let eh_content_length = const "#eh_content_length#"
-let eh_content_location = const "#eh_content_location#"
-let eh_content_md5 = const "#eh_content_md5#"
-let eh_content_range = const "#eh_content_range#"
-let eh_content_type = const "#eh_content_type#"
-let eh_expires = const "#eh_expires#"
-let eh_last_modified = const "#eh_last_modified#"
-let extension_header = const "#message_header#"
+let eh_allow = make_header "Allow" (const "GET, HEAD, PUT")
+(* let eh_content_encoding = const "#eh_content_encoding#" *)
+let eh_content_language = make_header "Content-Language" (const "mi, en")
+let eh_content_length = make_header "Content-Length" number
+let eh_content_location = make_header "Content-Location" uri
+let eh_content_md5 = make_header "Content-MD5" (const "md5-digest")
+(* let eh_content_range = const "#eh_content_range#" *)
+let eh_content_type =  make_header "Content-Type"
+  (const "text/html; charset=ISO-8859-4")
+let eh_expires = make_header "Expires" date
+let eh_last_modified = make_header "Last-Modified" date
+(* let extension_header = const "#message_header#" *)
 
 let entity_header = choose [
   eh_allow;                    (* Section 14.7 *)
-  eh_content_encoding;         (* Section 14.11 *)
+  (* eh_content_encoding;         (* Section 14.11 *) *)
   eh_content_language;         (* Section 14.12 *)
   eh_content_length;           (* Section 14.13 *)
   eh_content_location;         (* Section 14.14 *)
   eh_content_md5;              (* Section 14.15 *)
-  eh_content_range;            (* Section 14.16 *)
+  (* eh_content_range;            (* Section 14.16 *) *)
   eh_content_type;             (* Section 14.17 *)
   eh_expires;                  (* Section 14.21 *)
   eh_last_modified;            (* Section 14.29 *)
-  extension_header
+  (* extension_header *)
 ]
 
 
