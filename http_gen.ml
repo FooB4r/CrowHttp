@@ -35,8 +35,6 @@ let alpha = choose [upalpha; loalpha]
 let digit = map [range 10] (fun n -> Char.chr (n + 48) |> String.make 1)
 let ctl =
   map [choose [range 32; const 127]] (fun n -> Char.chr n |> (String.make 1))
-
-(* (Char.chr |> (String.make 1)) *)
 let cr = const "\r" (* <=> map [const 13] Char.chr exept it is a string*)
 let lf = const "\n" (* 10 *)
 let sp = const " " (* 32 *)
@@ -82,11 +80,14 @@ let separators = choose [const "("; const ")"; const "<"; const ">"; const "@";
   const "]"; const "?"; const "="; const "{"; const "}"; sp; ht]
 
 let quoted_pair = concat_gen_list lws_star [const "\\"; char_t]
-(*let qdtext =
-  let a = map [text] () *)
-
-let qdtext = const "#qdtext#" (* all but "\"" *)
-let ctext = const "#ctext#"
+(* any TEXT except "\"" *)
+let qdtext = map [text] (fun t ->
+    guard (not (String.contains t '"')); t
+  )
+(* any TEXT excluding "(" and ")" *)
+let ctext = map [text] (fun t ->
+    guard (not (String.contains t '(' || String.contains t ')')); t
+  )
 let quoted_string = concat_gen_list lws_star [
     dblquote; choose [qdtext; quoted_pair]; dblquote
   ]
