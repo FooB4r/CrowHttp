@@ -28,7 +28,7 @@ let optional s =
 
 (* Basic types *)
 let octet = bytes_fixed 8
-let char_t = map [range 128] (fun n -> String.make 1 (Char.chr n))
+let char_t = map [range 128] (fun n -> Char.chr n |> String.make 1)
 let upalpha = map [range 26] (fun n -> Char.chr (n + 65) |> String.make 1)
 let loalpha = map [range 26] (fun n -> Char.chr (n + 97) |> String.make 1)
 let alpha = choose [upalpha; loalpha]
@@ -111,7 +111,7 @@ let date = choose [rfc1123_date; rfc850_date; asctime_date]
 (*  Make a http header called <name> with <content> as a content *)
 (* string -> string gen list -> string gen *)
 let make_header name content =
-  concat_gen_list lws_star [const name; const ":"; content]
+  concat_gen_list lws_star [const name; const ":"; sp; content]
 
 (* /!\ MOST OF THE RULES ARE SIMPLIFIED /!\ *)
 let gh_cache_control = make_header "Cache-Control" (const "no-cache")
@@ -218,8 +218,41 @@ let entity_header = const "#entity_header#"
 let request_body = concat_list_gen lws_star (list(concat_gen_list lws
   [choose [general_header; request_header; entity_header]; crlf]))
 
+let full_request_body = concat_gen_list lws_star [
+  gh_cache_control; crlf;
+  gh_connection; crlf;
+  gh_date; crlf;
+  gh_pragma; crlf;
+  gh_via; crlf;
+  gh_warning; crlf;
+  rh_accept_charset; crlf;
+  rh_accept_encoding; crlf;
+  rh_accept_language; crlf;
+  rh_authorization; crlf;
+  rh_expect; crlf;
+  rh_from; crlf;
+  rh_host; crlf;
+  rh_if_match; crlf;
+  rh_if_modified_since; crlf;
+  rh_if_none_match; crlf;
+  rh_if_range; crlf;
+  rh_if_unmodified_since; crlf;
+  rh_max_forwards; crlf;
+  rh_proxy_authorization; crlf;
+  rh_referer; crlf;
+  rh_user_agent; crlf;
+  eh_allow; crlf;
+  eh_content_language; crlf;
+  eh_content_length; crlf;
+  eh_content_location; crlf;
+  eh_content_md5; crlf;
+  eh_content_type; crlf;
+  eh_expires; crlf;
+  eh_last_modified; crlf
+]
 
 let entity_body = concat_list_gen empty (list octet)
+let big_entity_body = concat_gen_list empty (list_gen_sized 20 octet)
 let message_body = entity_body (* + encoded *)
 
 (*URI: https://tools.ietf.org/html/rfc2396 *)
@@ -260,5 +293,5 @@ let pp_http ppf http =
 let () =
   add_test ~name:"http" [http] @@ (fun http ->
     Printf.printf "======================\n";
-    Printf.printf "%s\n" http;
+    Printf.printf "%s\n" http
   )
