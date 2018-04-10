@@ -48,6 +48,8 @@ let port = map [range 65536] string_of_int
 let lws = map [(optional crlf); (list1 (choose [sp; ht]))] String.concat
 let lws_star = concat_list_gen empty (list lws) (* regex: *lws *)
 let word_sep = concat_list_gen empty (list1 lws)
+let ows = concat_list_gen empty (list (choose [sp; ht]))
+let rws = concat_list_gen empty (list1 (choose [sp; ht]))
 
 (* any OCTET except CTLs, but including LWS*)
 let text =
@@ -262,7 +264,6 @@ let absolute_uri = const "#absolute_uri#"
 let request_uri = choose [const "*"; absolute_uri; abs_path; authority]
 
 let extension_method = token
-(* Ok here is a big problem, some methods requires some header fields and such *)
 let http_method = choose [const "OPTIONS"; const "GET"; const "HEAD"; const "POST";
   const "PUT"; const "DELETE"; const "TRACE"; const "CONNECT"; extension_method]
 
@@ -281,17 +282,13 @@ let expected_http_output = "\r"
 let pp_http ppf http =
   pp ppf "(%s)" (http)
 
+open Test_server
 
 (* Check *)
-(* let () =
-  add_test ~name:"http" [http] @@ (fun http ->
-    check_eq ~pp:pp_http http expected_http_output) *)
-
-(* Print possible outputs NO check *)
-
-(* To debug messages *)
 let () =
   add_test ~name:"http" [http] @@ (fun http ->
-    Printf.printf "======================\n";
-    Printf.printf "%s\n" http
-  )
+    Printf.printf "[===========-TESTING-===========]\n";
+    Printf.printf "%s\n" http;
+    (* TODO: get the actual response of the server to http message *)
+    let serv_response = ok_response in (* Server.get_resp http*)
+    check_eq ~pp:pp_http ~eq:eq_http serv_response ok_response)
