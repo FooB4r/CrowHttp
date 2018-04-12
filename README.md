@@ -1,13 +1,13 @@
 # CrowHttp
-Http simple grammar using [Crowbar](https://github.com/stedolan/crowbar/issues)
+Http simple grammar using [Crowbar](https://github.com/stedolan/crowbar/)
 
 ## Use me
 You need
-- [Crowbar](https://github.com/stedolan/crowbar/issues)
+- [Crowbar](https://github.com/stedolan/crowbar/)
 - [AFL](http://lcamtuf.coredump.cx/afl/) (or using opam)
 ```
 jbuilder build http_gen.exe
-_build/default/http_gen.exe
+afl-fuzz -i test/input -o output _build/default/http_gen.exe
 ```
 
 ## Objective
