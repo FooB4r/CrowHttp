@@ -33,6 +33,9 @@ let upalpha = map [range 26] (fun n -> Char.chr (n + 65) |> String.make 1)
 let loalpha = map [range 26] (fun n -> Char.chr (n + 97) |> String.make 1)
 let alpha = choose [upalpha; loalpha]
 let digit = map [range 10] (fun n -> Char.chr (n + 48) |> String.make 1)
+let tchar = choose[const "!"; const "#"; const "$"; const "%"; const "&";
+  const "'"; const "*"; const "+"; const "-"; const "."; const "^"; const "_";
+  const "`"; const "|"; const "~"; digit; alpha]
 let number = concat_list_gen empty (list1 digit)
 let ctl =
   map [choose [range 32; const 127]] (fun n -> Char.chr n |> (String.make 1))
@@ -48,8 +51,8 @@ let port = map [range 65536] string_of_int
 let lws = map [(optional crlf); (list1 (choose [sp; ht]))] String.concat
 let lws_star = concat_list_gen empty (list lws) (* regex: *lws *)
 let word_sep = concat_list_gen empty (list1 lws)
-let ows = concat_list_gen empty (list (choose [sp; ht]))
-let rws = concat_list_gen empty (list1 (choose [sp; ht]))
+let ows = concat_list_gen empty (list (choose [sp; ht])) (* optional ws *)
+let rws = concat_list_gen empty (list1 (choose [sp; ht])) (* required ws *)
 
 (* any OCTET except CTLs, but including LWS*)
 let text =
@@ -61,16 +64,10 @@ let text =
   choose [lws; octet]
 
 let hex = choose [digit; const "A"; const "B"; const "C"; const "D"; const "E";
-  const "F"; digit; const "a"; const "b"; const "c"; const "d"; const "e";
-  const "f"]
+  const "F"; const "a"; const "b"; const "c"; const "d"; const "e"; const "f"]
 
 (* 1*<any CHAR except CTLs or separators> *)
-let token = concat_list_gen empty (list1
-      (choose [
-        map [range 94] (fun n -> (String.make 1) (Char.chr (n + 32))); (* 32 -> 126*)
-        map [range 127] (fun n -> (String.make 1) (Char.chr (n + 128))) (*128 -> 255 *)
-      ])
-    )
+let token = concat_list_gen empty (list1 tchar)
 
 let product_version = token
 let product = concat_gen_list empty [const "/"; optional product_version]
@@ -97,9 +94,9 @@ let comment = concat_gen_list lws_star [
     const ")"
   ]
 
-let http_version =
-  concat_gen_list lws_star [const "HTTP"; const "/"; number; const "."; number]
-(* let http_version = const "HTTP/1.1" *)
+(* let http_version =
+  concat_gen_list lws_star [const "HTTP"; const "/"; number; const "."; number] *)
+let http_version = const "HTTP/1.1"
 
 let uri = const "#URI#" (*TODO read rfc on URIs + 3.2.3 URI Comparison ?? *)
 let http_url = const "#http_url#" (* TODO *)
@@ -113,7 +110,7 @@ let date = choose [rfc1123_date; rfc850_date; asctime_date]
 (*  Make a http header called <name> with <content> as a content *)
 (* string -> string gen list -> string gen *)
 let make_header name content =
-  concat_gen_list lws_star [const name; const ":"; sp; content]
+  concat_gen_list lws_star [const name; const ":"; ows; content; ows]
 
 (* /!\ MOST OF THE RULES ARE SIMPLIFIED /!\ *)
 let gh_cache_control = make_header "Cache-Control" (const "no-cache")
@@ -280,7 +277,7 @@ let http =
 let expected_http_output = "\r"
 
 let pp_http ppf http =
-  pp ppf "(%s)" (http)
+  pp ppf "(%s)" http
 
 open Test_server
 
@@ -290,5 +287,5 @@ let () =
     Printf.printf "[===========-TESTING-===========]\n";
     Printf.printf "%s\n" http;
     (* TODO: get the actual response of the server to http message *)
-    let serv_response = ok_response in (* Server.get_resp http*)
+    let serv_response = ok_response in (* Server.get_resp http *)
     check_eq ~pp:pp_http ~eq:eq_http serv_response ok_response)
