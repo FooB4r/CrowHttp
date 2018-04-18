@@ -1,10 +1,10 @@
 (jbuild_version 1)
 
-(executable
- ((name http_gen) (libraries (crowbar cohttp.lwt))
-))
+(executables
+ ((names (main test_server)) (libraries (crowbar cohttp.lwt)))
+)
 
 (alias
  ((name runtest)
-  (action (run ${exe:http_gen.exe}))
+  (action (run ${exe:main.exe}))
 ))

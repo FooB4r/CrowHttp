@@ -95,8 +95,8 @@ let comment = concat_gen_list lws_star [
   concat_gen_list lws_star [const "HTTP"; const "/"; number; const "."; number] *)
 let http_version = const "HTTP/1.1"
 
-let uri = const "#URI#" (*TODO read rfc on URIs + 3.2.3 URI Comparison ?? *)
-let http_url = const "#http_url#" (* TODO *)
+let uri = const "#URI#"
+let http_url = const "#http_url#"
 
 let rfc1123_date = const "Sun, 06 Nov 1994 08:49:37 GMT"
 let rfc850_date = const "Sunday, 06-Nov-94 08:49:37 GMT"
@@ -206,10 +206,6 @@ let entity_header = choose [
   (* extension_header *)
 ]
 
-
-let general_header = const "#general_header#"
-let entity_header = const "#entity_header#"
-
 (* @debug: if doesn't generate a lot change list -> list1 to force it *)
 let request_body = concat_list_gen lws_star (list(concat_gen_list lws
   [choose [general_header; request_header; entity_header]; crlf]))
@@ -252,9 +248,9 @@ let big_entity_body = concat_gen_list empty (list_gen_sized 20 octet)
 let message_body = entity_body (* + encoded *)
 
 (*URI: https://tools.ietf.org/html/rfc2396 *)
-let authority = const "#authority#"
-let abs_path = const "#abs_path#"
-let absolute_uri = const "#absolute_uri#"
+let authority = const "/" (* const "#authority#" *)
+let abs_path = const "/" (* const "#abs_path#" *)
+let absolute_uri = const "/" (* const "#absolute_uri#" *)
 let request_uri = choose [const "*"; absolute_uri; abs_path; authority]
 
 let extension_method = token
@@ -267,20 +263,3 @@ let request_line = (* Section 5.1 *)
 let request = (* Section 5 *)
   concat_gen_list lws_star [request_line; request_body; crlf; optional message_body]
 let http_message = request (* We are only interested in requests not responses *)
-
-let http =
-  choose [http_message]
-
-let pp_http ppf http =
-  pp ppf "(%s)" http
-
-open Test_server
-
-(* Check *)
-let () =
-  add_test ~name:"http" [http] @@ (fun http ->
-    Printf.printf "[===========-TESTING-===========]\n";
-    Printf.printf "%s\n" http;
-    (* TODO: get the actual response of the server to http message *)
-    let serv_response = ok_response in (* Server.get_resp http *)
-    check_eq ~pp:pp_http ~eq:eq_http serv_response ok_response)
