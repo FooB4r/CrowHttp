@@ -3,12 +3,6 @@ open Crowbar
 
 let empty = const ""
 
-(* concatenate a List of string gen inserting the separator string sep between each *)
-let concat_gen_list sep l =
-  List.fold_left (fun acc e ->
-    map [acc; sep; e] (fun acc sep e -> acc ^ e ^ sep)
-  ) empty l
-
 (* create a list of size n containing gen *)
 let list_gen_sized n gen =
   let rec list_gen_sized_aux n gen acc =
@@ -26,19 +20,22 @@ let concat_list_gen sep l =
 let optional s =
   choose [empty; s]
 
+let string_of_int i =
+  String.make 1 (Char.chr i)
+
 (* Basic types *)
 let octet = bytes_fixed 8
-let char_t = map [range 128] (fun n -> Char.chr n |> String.make 1)
-let upalpha = map [range 26] (fun n -> Char.chr (n + 65) |> String.make 1)
-let loalpha = map [range 26] (fun n -> Char.chr (n + 97) |> String.make 1)
+let char_t = map [range 128] string_of_int
+let upalpha = map[range ~min:65 26] string_of_int
+let loalpha = map [range ~min:97 26] string_of_int
 let alpha = choose [upalpha; loalpha]
-let digit = map [range 10] (fun n -> Char.chr (n + 48) |> String.make 1)
+let digit = map [range ~min:48 10] string_of_int
 let tchar = choose[const "!"; const "#"; const "$"; const "%"; const "&";
   const "'"; const "*"; const "+"; const "-"; const "."; const "^"; const "_";
   const "`"; const "|"; const "~"; digit; alpha]
 let number = concat_list_gen empty (list1 digit)
 let ctl =
-  map [choose [range 32; const 127]] (fun n -> Char.chr n |> (String.make 1))
+  map [choose [range 32; const 127]] string_of_int
 let cr = const "\r" (* <=> map [const 13] Char.chr exept it is a string*)
 let lf = const "\n" (* 10 *)
 let sp = const " " (* 32 *)
@@ -273,8 +270,6 @@ let http_message = request (* We are only interested in requests not responses *
 
 let http =
   choose [http_message]
-
-let expected_http_output = "\r"
 
 let pp_http ppf http =
   pp ppf "(%s)" http
