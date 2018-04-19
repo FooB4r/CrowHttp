@@ -25,6 +25,7 @@ let () =
   (* TODO: Launching the server *)
   (* Testing *)
   Crowbar.add_test ~name:"http" [http_message] @@ (fun http ->
+    Printf.printf "[===-TESTING-===]\n%s\n" http;
     let serv_response = one_time_client portNumber http in
-    Printf.printf "[===-Response-===]\n %s\n---\n" serv_response;
+    Printf.printf "|-----Resp------|\n%s\n" serv_response;
     Crowbar.check_eq ~pp:pp_http ~eq:eq_http serv_response okResponse);

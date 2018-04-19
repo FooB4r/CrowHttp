@@ -25,4 +25,5 @@ let one_time_client port msg =
   let _ = send_message fd msg in
   let resp = read_response fd in
   close_connection fd;
+  close fd;
   resp
