@@ -16,7 +16,8 @@ let send_message fd msg =
 
 let read_response fd =
   let resp = Bytes.create 256 in
-  let _ = read fd resp 0 256 in
+  let r = read fd resp 0 256 in
+  let resp = Bytes.sub resp 0 r in
   Bytes.to_string resp
 
 (* Client that open a connection, send the message [msg] and closes the co *)
