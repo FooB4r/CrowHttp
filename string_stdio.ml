@@ -1,31 +1,24 @@
 module Cohttp_String_stdio = struct
   type 'a t = 'a Lwt.t
-  type ic = in_channel
-  type oc = out_channel
-  type conn = string
+  type ic = Lwt_io.input_channel
+  type oc = Lwt_io.output_channel
+  type conn = Conduit_lwt_unix.flow
   let (>>=) = Lwt.bind
   let return = Lwt.return
 
-  let ic = stdin
-  let oc = stdout
-  let conn = ""
+  let ic = Lwt_io.stdin
+  let oc = Lwt_io.stdout
+  (* let conn = Conduit_lwt_unix.flow *)
 
   let read_line ic =
-    try
-      let s = input_line ic in
-      return (Some s)
-    with _ -> return None
+    Lwt_io.read_line_opt ic
 
   let read ic n =
-    try
-      let s = really_input_string ic n in
-      return s
-    with _ -> return ""
-
+    Lwt_io.read ~count:n ic
 
   let write oc s =
-    return (output_string oc s)
+    Lwt_io.write oc s
 
   let flush oc =
-    return (flush oc)
+    Lwt_io.flush oc
 end
