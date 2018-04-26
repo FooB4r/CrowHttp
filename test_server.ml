@@ -1,13 +1,18 @@
+open Cohttp_lwt
 open Lwt
-open Cohttp
-open Cohttp_lwt_unix
 
-let callback _conn req body =
-  (Cohttp_lwt.Body.to_string body) >>= (fun body ->
-    Server.respond_string ~status:`OK ~body ())
+module Request = Cohttp.Request.Make(String_stdio)
 
-let server = Server.create ~mode:(`TCP (`Port 8000)) (Server.make ~callback ())
+let read_request req =
+  Request.read (Cohttp__String_io.open_in req)
 
-(* let server port = Server.create ~mode:(`TCP (`Port port)) (Server.make ~callback ()) *)
+let string_of_status = function
+  | `Ok _ -> "Ok"
+  | `Eof -> "Eof"
+  | `Invalid reason -> "Invalid: " ^ reason
 
-let () = ignore (Lwt_main.run server)
+let is_parsed retCode expected =
+  match retCode with
+  | `Ok _ -> true
+  | `Eof -> false
+  | `Invalid _ -> false

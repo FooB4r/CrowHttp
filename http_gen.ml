@@ -92,8 +92,8 @@ let comment = concat_gen_list lws_star [
   ]
 
 (* let http_version =
-  concat_gen_list lws_star [const "HTTP"; const "/"; number; const "."; number] *)
-let http_version = const "HTTP/1.1"
+  concat_gen_list ows [const "HTTP"; const "/"; number; const "."; number] *)
+let http_version = concat_gen_list ows [const "HTTP"; const "/"; const "1"; const "."; const "1"]
 
 let uri = const "#URI#"
 let http_url = const "#http_url#"
@@ -107,7 +107,7 @@ let date = choose [rfc1123_date; rfc850_date; asctime_date]
 (*  Make a http header called <name> with <content> as a content *)
 (* string -> string gen list -> string gen *)
 let make_header name content =
-  concat_gen_list lws_star [const name; const ":"; ows; content; ows]
+  concat_gen_list empty [const name; const ":"; ows; content; ows]
 
 (* /!\ MOST OF THE RULES ARE SIMPLIFIED /!\ *)
 let gh_cache_control = make_header "Cache-Control" (const "no-cache")
@@ -207,7 +207,7 @@ let entity_header = choose [
 ]
 
 (* @debug: if doesn't generate a lot change list -> list1 to force it *)
-let request_body = concat_list_gen lws_star (list(concat_gen_list lws
+let request_body = concat_list_gen empty (list(concat_gen_list empty
   [choose [general_header; request_header; entity_header]; crlf]))
 
 let full_request_body = concat_gen_list lws_star [
@@ -248,17 +248,17 @@ let big_entity_body = concat_gen_list empty (list_gen_sized 20 octet)
 let message_body = entity_body (* + encoded *)
 
 (*URI: https://tools.ietf.org/html/rfc2396 *)
-let authority = const "/" (* const "#authority#" *)
-let abs_path = const "/" (* const "#abs_path#" *)
-let absolute_uri = const "/" (* const "#absolute_uri#" *)
-let request_uri = choose [const "*"; absolute_uri; abs_path; authority]
+let authority_form = const "userinfo@host:1234"
+let absolute_uri = const "/absolutely/uri"
+let origin_form = concat_gen_list empty [absolute_uri; const "?q=helloworld&t=ffab&ia=web"]
+let request_target = choose [const "*"; origin_form; absolute_uri; authority_form]
 
 let extension_method = token
 let http_method = choose [const "OPTIONS"; const "GET"; const "HEAD"; const "POST";
   const "PUT"; const "DELETE"; const "TRACE"; const "CONNECT"; extension_method]
 
 let request_line = (* Section 5.1 *)
-  concat_gen_list empty [http_method; sp; request_uri; sp; http_version; crlf]
+  concat_gen_list ows [http_method; sp; request_target; sp; http_version; crlf]
 
 let request = (* Section 5 *)
   concat_gen_list lws_star [request_line; request_body; crlf; optional message_body]
