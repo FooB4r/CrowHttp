@@ -1,9 +1,16 @@
 open Http_gen
-open Test_client
 
 let okResponse = "HTTP/1.1 200 OK"
 let portNumber = 8000
+let verbosity = false
 
+let print_cond a =
+  if verbosity then
+    Printf.printf a
+  else
+    (fun _ -> ())
+
+(* http processing *)
 (* returns [str] from begining to the first occurence of \n *)
 let get_first_line str =
   let pos = String.index_opt str '\n' in
@@ -15,17 +22,35 @@ let pp_http ppf http =
   let msg = get_first_line http in
   Crowbar.pp ppf "%s" msg
 
-(* Check if the reponse is [expected] *)
 let eq_http response_str expected =
   let fst_line = get_first_line response_str in
   String.equal fst_line expected
 
+(* Request processing *)
+module Request = Cohttp.Request.Make(String_io)
+
+let read_request req =
+  Request.read (Cohttp__String_io.open_in req)
+
+let string_of_status = function
+  | `Ok _ -> "Ok"
+  | `Eof -> "Eof"
+  | `Invalid reason -> "Invalid: " ^ reason
+
+let is_parsed retCode expected =
+  match retCode with
+  | `Ok _ -> true
+  | `Eof -> false
+  | `Invalid _ -> false
+
+let print_status status =
+  print_cond "STATUS: %s\n" (string_of_status status)
+
 (* Check *)
 let () =
-  (* TODO: Launching the server *)
-  (* Testing *)
+  print_cond "%s\n%!" "Starting the tests...";
   Crowbar.add_test ~name:"http" [http_message] @@ (fun http ->
-    Printf.printf "[===-TESTING-===]\n%s\n" http;
-    let serv_response = one_time_client portNumber http in
-    Printf.printf "|-----Resp------|\n%s\n" serv_response;
-    Crowbar.check_eq ~pp:pp_http ~eq:eq_http serv_response okResponse);
+    print_cond "[===-TESTING-===]\n%s\n" http;
+    let status = Lwt_main.run (read_request http) in
+    print_cond "STATUS: %s\n" (string_of_status status);
+    Crowbar.check_eq ~eq:is_parsed status status);

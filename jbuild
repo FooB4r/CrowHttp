@@ -1,7 +1,7 @@
 (jbuild_version 1)
 
-(executables
- ((names (main test_server)) (libraries (crowbar cohttp.lwt)))
+(executable
+ ((name main) (libraries (crowbar cohttp.lwt)))
 )
 
 (alias
