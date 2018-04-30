@@ -2,7 +2,7 @@
 
 set -eu
 
-aflfuzz=/home/raph/.opam/4.05.0+afl/bin/afl-fuzz
+aflfuzz=afl-fuzz
 executable=_build/default/main.exe
 
 # echo $core_pattern_backup >/proc/sys/kernel/core_pattern
