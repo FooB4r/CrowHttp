@@ -2,7 +2,7 @@ open Http_gen
 
 let okResponse = "HTTP/1.1 200 OK"
 let portNumber = 8000
-let verbosity = true
+let verbosity = false
 
 let print_cond a =
   if verbosity then

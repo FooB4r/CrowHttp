@@ -20,22 +20,22 @@ let concat_list_gen sep l =
 let optional s =
   choose [empty; s]
 
-let string_of_int i =
-  String.make 1 (Char.chr i)
+let string_of_charint i =
+  i |> Char.chr |> (String.make 1)
 
 (* Basic types *)
 let octet = bytes_fixed 8
-let char_t = map [range 128] string_of_int
-let upalpha = map[range ~min:65 26] string_of_int
-let loalpha = map [range ~min:97 26] string_of_int
+let char_t = map [range 128] string_of_charint
+let upalpha = map[range ~min:65 26] string_of_charint
+let loalpha = map [range ~min:97 26] string_of_charint
 let alpha = choose [upalpha; loalpha]
-let digit = map [range ~min:48 10] string_of_int
+let digit = map [range ~min:48 10] string_of_charint
 let tchar = choose[const "!"; const "#"; const "$"; const "%"; const "&";
   const "'"; const "*"; const "+"; const "-"; const "."; const "^"; const "_";
   const "`"; const "|"; const "~"; digit; alpha]
 let number = concat_list_gen empty (list1 digit)
 let ctl =
-  map [choose [range 32; const 127]] string_of_int
+  map [choose [range 32; const 127]] string_of_charint
 let cr = const "\r" (* <=> map [const 13] Char.chr exept it is a string*)
 let lf = const "\n" (* 10 *)
 let sp = const " " (* 32 *)
@@ -207,7 +207,7 @@ let entity_header = choose [
 ]
 
 (* @debug: if doesn't generate a lot change list -> list1 to force it *)
-let request_body = concat_list_gen empty (list(concat_gen_list empty
+let request_body = concat_list_gen empty (list1(concat_gen_list empty
   [choose [general_header; request_header; entity_header]; crlf]))
 
 let full_request_body = concat_gen_list lws_star [
