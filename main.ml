@@ -2,16 +2,16 @@ open Http_gen
 
 let okResponse = "HTTP/1.1 200 OK"
 let portNumber = 8000
-let verbosity = false
+let verbosity = ref false
 
 let print_cond a =
-  if verbosity then
+  if !verbosity then
     Printf.printf a
   else
     (fun _ -> ())
 
 let print_cond a =
-  if verbosity then
+  if !verbosity then
     Printf.printf a
   else
     (fun _ -> ())
@@ -54,6 +54,10 @@ let print_status status =
 
 (* Check *)
 let () =
+  for i = 0 to Array.length Sys.argv - 1 do
+    if Sys.argv.(i) = "-v" || Sys.argv.(i) = "--verbose" then
+      verbosity := true;
+  done;;
   print_cond "%s\n%!" "Starting the tests...";
   Crowbar.add_test ~name:"http" [http_message] @@ (fun http ->
     print_cond "[===-TESTING-===]\n%s\n" http;
