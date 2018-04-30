@@ -52,11 +52,19 @@ let is_parsed retCode expected =
 let print_status status =
   print_cond "STATUS: %s\n" (string_of_status status)
 
+let print_help () =
+  Printf.printf "%s\n" Sys.argv.(0);
+  Printf.printf "Usage %s [OPTION]\n" Sys.argv.(0);
+  Printf.printf "\t -v, --verbose Print information on each tests\n";
+  Printf.printf "\t -h, --help    Show this help\n"
+
 (* Check *)
 let () =
   for i = 0 to Array.length Sys.argv - 1 do
     if Sys.argv.(i) = "-v" || Sys.argv.(i) = "--verbose" then
       verbosity := true;
+    if Sys.argv.(i) = "-h" || Sys.argv.(i) = "--help" then
+      print_help ();
   done;
   print_cond "%s\n%!" "Starting the tests...";
   Crowbar.add_test ~name:"http" [http_message] @@ (fun http ->
