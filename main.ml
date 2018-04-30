@@ -57,7 +57,7 @@ let () =
   for i = 0 to Array.length Sys.argv - 1 do
     if Sys.argv.(i) = "-v" || Sys.argv.(i) = "--verbose" then
       verbosity := true;
-  done;;
+  done;
   print_cond "%s\n%!" "Starting the tests...";
   Crowbar.add_test ~name:"http" [http_message] @@ (fun http ->
     print_cond "[===-TESTING-===]\n%s\n" http;
