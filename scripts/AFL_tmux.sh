@@ -6,10 +6,10 @@ aflfuzz=afl-fuzz
 executable=_build/default/main.exe
 
 ## parallelization
-cmd1="$aflfuzz -i input/ -o sync_dir/ -M fuzzer01 $executable"
-cmd2="$aflfuzz -i input/ -o sync_dir/ -S fuzzer02 $executable"
-cmd3="$aflfuzz -i input/ -o sync_dir/ -S fuzzer03 $executable"
-cmd4="$aflfuzz -i input/ -o sync_dir/ -S fuzzer04 $executable"
+cmd1="$aflfuzz -i input/ -o sync_dir/ -M fuzzer01 $executable @@"
+cmd2="$aflfuzz -i input/ -o sync_dir/ -S fuzzer02 $executable @@"
+cmd3="$aflfuzz -i input/ -o sync_dir/ -S fuzzer03 $executable @@"
+cmd4="$aflfuzz -i input/ -o sync_dir/ -S fuzzer04 $executable @@"
 
 tmux new -s afl_fuzz -d
 tmux bind-key -n C-c send-keys C-c "tmux kill-session -t afl_fuzz" Enter

@@ -19,7 +19,7 @@ jbuilder build main.exe
 
 2. Launch the tests
   - Simple execution, without AFL `_build/default/main.exe`
-  - With AFL `afl-fuzz -i test/input -o output _build/default/main.exe`
+  - With AFL `afl-fuzz -i test/input -o output _build/default/main.exe @@`
   - With Parallel AFL using tmux `scripts/AFL_tmux.sh`
 
 ## Objective
