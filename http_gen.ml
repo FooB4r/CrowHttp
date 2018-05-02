@@ -3,6 +3,9 @@ open Crowbar
 
 let empty = const ""
 
+(* Concat operator for string gen *)
+let (^^) a b = map [a; b] (^)
+
 (* create a list of size n containing gen *)
 let list_gen_sized n gen =
   let rec list_gen_sized_aux n gen acc =
@@ -20,6 +23,7 @@ let concat_list_gen sep l =
 let optional s =
   choose [empty; s]
 
+(* converts an int in [0;255] in a string(1) of the corresponding char *)
 let string_of_charint i =
   i |> Char.chr |> (String.make 1)
 
@@ -51,6 +55,12 @@ let word_sep = concat_list_gen empty (list1 lws)
 let ows = concat_list_gen empty (list (choose [sp; ht])) (* optional ws *)
 let rws = concat_list_gen empty (list1 (choose [sp; ht])) (* required ws *)
 
+(* List in http look like this *)
+(* *( "," OWS ) content *( OWS "," [ OWS content ) ] ) *)
+let http_list content =
+  (concat_list_gen empty (list(const "," ^^ ows))) ^^ content ^^
+  (concat_list_gen empty (list(ows ^^ const "," ^^ optional(ows ^^ content))))
+
 (* any OCTET except CTLs, but including LWS*)
 let text =
   let octet = map [octet] (fun str ->
@@ -67,7 +77,7 @@ let hex = choose [digit; const "A"; const "B"; const "C"; const "D"; const "E";
 let token = concat_list_gen empty (list1 tchar)
 
 let product_version = token
-let product = concat_gen_list empty [const "/"; optional product_version]
+let product = const "/" ^^ optional product_version
 
 let separators = choose [const "("; const ")"; const "<"; const ">"; const "@";
   const ","; const ";"; const ":"; const "\\"; dblquote; const "/"; const "[";
@@ -107,7 +117,7 @@ let date = choose [rfc1123_date; rfc850_date; asctime_date]
 (*  Make a http header called <name> with <content> as a content *)
 (* string -> string gen list -> string gen *)
 let make_header name content =
-  concat_gen_list empty [const name; const ":"; ows; content; ows]
+  const name ^^ const ":" ^^ ows ^^ content ^^ ows
 
 (* /!\ MOST OF THE RULES ARE SIMPLIFIED /!\ *)
 let gh_cache_control = make_header "Cache-Control" (const "no-cache")
@@ -207,8 +217,8 @@ let entity_header = choose [
 ]
 
 (* @debug: if doesn't generate a lot change list -> list1 to force it *)
-let request_body = concat_list_gen empty (list1(concat_gen_list empty
-  [choose [general_header; request_header; entity_header]; crlf]))
+let request_body = concat_list_gen empty (
+  list(choose [general_header; request_header; entity_header] ^^ crlf))
 
 let full_request_body = concat_gen_list lws_star [
   gh_cache_control; crlf;
@@ -250,7 +260,7 @@ let message_body = entity_body (* + encoded *)
 (*URI: https://tools.ietf.org/html/rfc2396 *)
 let authority_form = const "userinfo@host:1234"
 let absolute_uri = const "/absolutely/uri"
-let origin_form = concat_gen_list empty [absolute_uri; const "?q=helloworld&t=ffab&ia=web"]
+let origin_form = absolute_uri ^^ const "?q=helloworld&t=ffab&ia=web"
 let request_target = choose [const "*"; origin_form; absolute_uri; authority_form]
 
 let extension_method = token
