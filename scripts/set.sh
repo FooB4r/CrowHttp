@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -eu
+set -eux
 
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
@@ -16,12 +16,13 @@ scaling_governor_backup=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_gover
 echo
 if [ ! -e "$reset_script" ]
 then
-  su "$USER" sh -c echo "#!/bin/sh
+  reset_content="\"#!/bin/sh
   set -eu
   echo \"$core_pattern_backup\" >/proc/sys/kernel/core_pattern
-  echo \"$scaling_governor_backup\" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"\
-    > "$reset_script"
-  chmod +x $reset_script
+  echo \"$scaling_governor_backup\" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor\""
+  srescmd="echo $reset_content > $reset_script"
+  su "$USER" sh -c "$srescmd"
+  chmod +x "$reset_script"
 else
   echo "$reset_script script already done"
 fi
