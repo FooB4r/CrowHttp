@@ -16,15 +16,14 @@ scaling_governor_backup=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_gover
 echo
 if [ ! -e "$reset_script" ]
 then
-  echo "#!/bin/sh
+  su "$USER" sh -c echo "#!/bin/sh
   set -eu
-  echo $core_pattern_backup >/proc/sys/kernel/core_pattern
-  echo $scaling_governor_backup | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor" \
+  echo \"$core_pattern_backup\" >/proc/sys/kernel/core_pattern
+  echo \"$scaling_governor_backup\" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor"\
     > "$reset_script"
-  chmod +x $reset_script;
+  chmod +x $reset_script
 else
   echo "$reset_script script already done"
-  exit;
 fi
 
 # Performance factors improvement
