@@ -33,10 +33,10 @@ let eq_http response_str expected =
   String.equal fst_line expected
 
 (* Request processing *)
-module Request = Cohttp.Request.Make(String_io)
+module Cohttp_Request = Cohttp.Request.Make(String_io)
 
 let read_request req =
-  Request.read (Cohttp__String_io.open_in req)
+  Cohttp_Request.read (Cohttp__String_io.open_in req)
 
 let string_of_status = function
   | `Ok _ -> "Ok"
@@ -46,7 +46,7 @@ let string_of_status = function
 let is_parsed retCode expected =
   match retCode with
   | `Ok _ -> true
-  | `Eof -> false
+  | `Eof -> true
   | `Invalid _ -> false
 
 let print_status status =

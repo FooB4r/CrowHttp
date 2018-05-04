@@ -113,11 +113,14 @@ let rfc850_date = const "Sunday, 06-Nov-94 08:49:37 GMT"
 let asctime_date = const "Sun Nov  6 08:49:37 1994"
 let date = choose [rfc1123_date; rfc850_date; asctime_date]
 
+(* Adds lws_star between words *)
+let split_content str =
+  let l = map [str] (String.split_on_char ' ') in
+  concat_list_gen lws_star l
 
 (*  Make a http header called <name> with <content> as a content *)
-(* string -> string gen list -> string gen *)
 let make_header name content =
-  const name ^^ const ":" ^^ ows ^^ content ^^ ows
+  const name ^^ const ":" ^^ lws_star ^^ (split_content content)
 
 (* /!\ MOST OF THE RULES ARE SIMPLIFIED /!\ *)
 let gh_cache_control = make_header "Cache-Control" (const "no-cache")
@@ -268,7 +271,7 @@ let http_method = choose [const "OPTIONS"; const "GET"; const "HEAD"; const "POS
   const "PUT"; const "DELETE"; const "TRACE"; const "CONNECT"; extension_method]
 
 let request_line = (* Section 5.1 *)
-  concat_gen_list ows [http_method; sp; request_target; sp; http_version; crlf]
+  concat_gen_list empty [http_method; sp; request_target; sp; http_version; crlf]
 
 let request = (* Section 5 *)
   concat_gen_list lws_star [request_line; request_body; crlf; optional message_body]
