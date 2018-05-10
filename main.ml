@@ -1,14 +1,10 @@
 open Http_gen
+open Cohttp_test
+open Httpaf_test
 
 let okResponse = "HTTP/1.1 200 OK"
 let portNumber = 8000
 let verbosity = ref false
-
-let print_cond a =
-  if !verbosity then
-    Printf.printf a
-  else
-    (fun _ -> ())
 
 let print_cond a =
   if !verbosity then
@@ -32,25 +28,11 @@ let eq_http response_str expected =
   let fst_line = get_first_line response_str in
   String.equal fst_line expected
 
-(* Request processing *)
-module Cohttp_Request = Cohttp.Request.Make(String_io)
-
-let read_request req =
-  Cohttp_Request.read (Cohttp__String_io.open_in req)
-
-let string_of_status = function
-  | `Ok _ -> "Ok"
-  | `Eof -> "Eof"
-  | `Invalid reason -> "Invalid: " ^ reason
-
-let is_parsed retCode expected =
-  match retCode with
-  | `Ok _ -> true
-  | `Eof -> true
-  | `Invalid _ -> false
+let xor_bool out1 out2 =
+  (out1 = out2)
 
 let print_status status =
-  print_cond "STATUS: %s\n" (string_of_status status)
+  print_cond "STATUS: %s\n" (string_of_cohttp_status status)
 
 let print_help () =
   Printf.printf "%s\n" Sys.argv.(0);
@@ -69,6 +51,11 @@ let () =
   print_cond "%s\n%!" "Starting the tests...";
   Crowbar.add_test ~name:"http" [http_message] @@ (fun http ->
     print_cond "[===-TESTING-===]\n%s\n" http;
-    let status = Lwt_main.run (read_request http) in
-    print_cond "STATUS: %s\n" (string_of_status status);
-    Crowbar.check_eq ~eq:is_parsed status status);
+    let co_status = Lwt_main.run (read_request_cohttp http) in
+    let af_status = read_request_httpaf http in
+    print_cond "%s\n" "cohttp\t| httpaf";
+    print_cond "%s\t|" (string_of_cohttp_status co_status);
+    print_cond " %s/" (string_of_httpaf_status af_status);
+    print_cond "%d\n" (String.length http);
+    let are_same = xor_bool (bool_of_retCode co_status) (bool_of_httpaf af_status) in
+    Crowbar.check are_same);

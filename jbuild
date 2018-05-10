@@ -1,7 +1,7 @@
 (jbuild_version 1)
 
 (executable
- ((name main) (libraries (crowbar cohttp.lwt)))
+ ((name main) (libraries (crowbar cohttp.lwt httpaf)))
 )
 
 (alias
