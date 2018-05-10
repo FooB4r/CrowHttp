@@ -15,9 +15,6 @@ let error_handler ?request:_ error handle =
   | `Exn e -> raise (Failure ("(Exn) " ^ (Printexc.to_string e)))
   | `Internal_server_error -> raise (Failure "Internal_server_error")
 
-let error_handler ?request:_ error handle =
-  raise (Failure "lol")
-
 let serv_co () = Server_connection.create ~error_handler (req_handler "")
 
 (* read the whole message *)
