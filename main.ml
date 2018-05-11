@@ -53,9 +53,10 @@ let () =
     print_cond "[===-TESTING-===]\n%s\n" http;
     let co_status = Lwt_main.run (read_request_cohttp http) in
     let af_status = read_request_httpaf http in
-    print_cond "%s\n" "cohttp\t| httpaf";
-    print_cond "%s\t|" (string_of_cohttp_status co_status);
-    print_cond " %s/" (string_of_httpaf_status af_status);
+    print_cond "%s\n" "[---cohttp-Status---]";
+    print_cond "%s\n" (string_of_cohttp_status co_status);
+    print_cond "%s\n" "[---httpaf-Status---]";
+    print_cond "%s/" (string_of_httpaf_status af_status);
     print_cond "%d\n" (String.length http);
     let are_same = xor_bool (bool_of_retCode co_status) (bool_of_httpaf af_status) in
     Crowbar.check are_same);

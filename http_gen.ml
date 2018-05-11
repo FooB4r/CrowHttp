@@ -113,10 +113,32 @@ let rfc850_date = const "Sunday, 06-Nov-94 08:49:37 GMT"
 let asctime_date = const "Sun Nov  6 08:49:37 1994"
 let date = choose [rfc1123_date; rfc850_date; asctime_date]
 
+(* split the string s at the index n *)
+let split_at s index =
+  if String.length s < index then
+    failwith "String smaller than splitting index"
+  else
+    ((String.sub s 0 index), (String.sub s index (String.length s - index)))
+
+(* str -> int list -> str list -- [split_at_n str indexes] *)
+(* Splits [str] at all [indexes] once and returns the list of splitted parts *)
+(* split_at_n "hello" [1;3;3;5] -> ["h";"el";"lo";""] *)
+let split_at_n s indexes =
+  let indexes = List.sort_uniq (fun a b -> b - a) indexes in
+  let rec _split_at_n s ids acc =
+    match ids with
+    | [] -> s::acc
+    | id::nextids -> let (s1,s2) = split_at s id in
+      _split_at_n s1 nextids (s2::acc)
+  in
+  _split_at_n s indexes []
+
 (* Adds lws_star between words *)
+(* TODO: to split generate the headers separetly and an random number list *)
+(* Then in ocaml call the function split_at_n <genHeader> <RdmList>*)
+(* separetly generate the rest if the message and concat the whole processed pieces *)
 let split_content str =
-  let l = map [str] (String.split_on_char ' ') in
-  concat_list_gen lws_star l
+  str
 
 (*  Make a http header called <name> with <content> as a content *)
 let make_header name content =
@@ -274,5 +296,8 @@ let request_line = (* Section 5.1 *)
   concat_gen_list empty [http_method; sp; request_target; sp; http_version; crlf]
 
 let request = (* Section 5 *)
-  concat_gen_list lws_star [request_line; request_body; crlf; optional message_body]
+  concat_gen_list empty [request_line; request_body; optional (message_body ^^ crlf)]
+
+let not_a_request = const "Not a http request"
+let test_request = const "GET / HTTP/1.1" ^^ crlf ^^ crlf
 let http_message = request (* We are only interested in requests not responses *)

@@ -1,11 +1,12 @@
 open Httpaf
 
+exception Ok
+
 (* Httpaf Request processing *)
 let req_handler body reqd =
   let req_body = Reqd.request_body reqd in
   (* Not in 0.2.0 release *)
-  Body.close_reader req_body;
-  Reqd.respond_with_string reqd (Response.create `OK) body
+  Body.close_reader req_body
 
 let error_handler ?request:_ error handle =
   Printf.printf "I caught an error \n";
@@ -30,10 +31,12 @@ let read_loop conn req =
         let len = reqlen - size in (* len remaining *)
         (* Not in 0.2.0 release *)
         let result = Server_connection.read conn input ~off:size ~len in
-        (* Printf.printf "[READ(%d)] size: %d, len: %d -- tot: %d\n" result size len reqlen; *)
+        Printf.printf "[READ(%d)] size: %d, len: %d -- tot: %d\n" result size len reqlen;
         if result = 0 then size
         else _loop (size+result)
-      | `Close -> size
+      | `Close ->
+        Printf.printf "[CLOSE]\n";
+        size
       | `Yield -> Server_connection.yield_reader conn (fun () -> ());
         _loop size
   in
@@ -46,7 +49,7 @@ let read_request_httpaf req =
       read_loop serv req
     with
     | Failure msg -> Printf.printf "%s\n" msg; -1
-    (* | _ -> Printf.printf "Unkown failure\n"; -1 *)
+    | _ -> Printf.printf "Unkown failure\n"; -1
 
 let string_of_httpaf_status = function
   | i -> string_of_int i
