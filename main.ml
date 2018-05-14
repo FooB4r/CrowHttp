@@ -51,7 +51,7 @@ let () =
   print_cond "%s\n%!" "Starting the tests...";
   Crowbar.add_test ~name:"http" [http_message] @@ (fun http ->
     print_cond "[===-TESTING-===]\n%s\n" http;
-    let co_status = Lwt_main.run (read_request_cohttp http) in
+    let co_status = read_request_cohttp http in
     let af_status = read_request_httpaf http in
     print_cond "%s\n" "[---cohttp-Status---]";
     print_cond "%s\n" (string_of_cohttp_status co_status);

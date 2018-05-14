@@ -1,6 +1,6 @@
-type 'a t = 'a Lwt.t
-let return = Lwt.return
-let (>>=) = Lwt.bind
+type 'a t = 'a
+let return a = a
+let (>>=) = (|>)
 
 module Sio = Cohttp__String_io
 

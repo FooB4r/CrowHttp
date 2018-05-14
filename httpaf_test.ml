@@ -31,11 +31,11 @@ let read_loop conn req =
         let len = reqlen - size in (* len remaining *)
         (* Not in 0.2.0 release *)
         let result = Server_connection.read conn input ~off:size ~len in
-        Printf.printf "[READ(%d)] size: %d, len: %d -- tot: %d\n" result size len reqlen;
+        (* Printf.printf "[READ(%d)] size: %d, len: %d -- tot: %d\n" result size len reqlen; *)
         if result = 0 then size
         else _loop (size+result)
       | `Close ->
-        Printf.printf "[CLOSE]\n";
+        (* Printf.printf "[CLOSE]\n"; *)
         size
       | `Yield -> Server_connection.yield_reader conn (fun () -> ());
         _loop size
