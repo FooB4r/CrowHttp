@@ -110,7 +110,7 @@ let http_url = const "#http_url#"
 
 let rfc1123_date = const "Sun, 06 Nov 1994 08:49:37 GMT"
 let rfc850_date = const "Sunday, 06-Nov-94 08:49:37 GMT"
-let asctime_date = const "Sun Nov  6 08:49:37 1994"
+let asctime_date = const "Sun Nov 6 08:49:37 1994"
 let date = choose [rfc1123_date; rfc850_date; asctime_date]
 
 (* split the string s at the index n *)
@@ -123,14 +123,16 @@ let split_at s index =
 (* Splits [str] at all [indexes] once and returns the list of splitted parts *)
 (* split_at_n "hello" [1;3;3;5] -> ["h";"el";"lo";""] *)
 let split_at_n s indexes =
-  let indexes = List.sort_uniq (fun a b -> b - a) indexes in
-  let rec _split_at_n s ids acc =
-    match ids with
-    | [] -> s::acc
-    | id::nextids -> let (s1,s2) = split_at s id in
-      _split_at_n s1 nextids (s2::acc)
-  in
-  _split_at_n s indexes []
+  if String.length s < 2 then [s] (* avoid early msg end *)
+  else
+    let indexes = List.sort_uniq (fun a b -> b - a) indexes in
+    let rec _split_at_n s ids acc =
+      match ids with
+      | [] -> s::acc
+      | id::nextids -> let (s1,s2) = split_at s id in
+        _split_at_n s1 nextids (s2::acc)
+    in
+    _split_at_n s indexes []
 
 
 (* 20 random list of 10 numbers in [0;99] *)
@@ -306,7 +308,7 @@ let full_request_body = concat_gen_list lws_star [
   eh_last_modified; crlf
 ]
 
-let entity_body = concat_list_gen empty (list octet)
+let entity_body = concat_list_gen empty (list1 octet) (* WARNING this yield anything *)
 let big_entity_body = concat_gen_list empty (list_gen_sized 20 octet)
 let message_body = entity_body (* + encoded *)
 
@@ -321,10 +323,10 @@ let http_method = choose [const "OPTIONS"; const "GET"; const "HEAD"; const "POS
   const "PUT"; const "DELETE"; const "TRACE"; const "CONNECT"; extension_method]
 
 let request_line = (* Section 5.1 *)
-  concat_gen_list empty [http_method; sp; request_target; sp; http_version; crlf]
+  http_method ^^ sp ^^ request_target ^^  sp ^^ http_version ^^ crlf
 
 let request = (* Section 5 *)
-  concat_gen_list empty [request_line; request_body; optional (message_body ^^ crlf)]
+  request_line ^^ request_body ^^ (optional (message_body ^^ crlf)) ^^ crlf
 
 let not_a_request = const "Not a http request"
 let test_request = const "GET / HTTP/1.1" ^^ crlf ^^ crlf

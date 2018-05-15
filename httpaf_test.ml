@@ -37,8 +37,10 @@ let read_loop conn req =
       | `Close ->
         (* Printf.printf "[CLOSE]\n"; *)
         size
-      | `Yield -> Server_connection.yield_reader conn (fun () -> ());
-        _loop size
+      | `Yield ->
+        Server_connection.yield_reader conn (fun () -> ());
+        (* Printf.printf "[YIELD]\n"; *)
+        0
   in
   _loop 0
 
