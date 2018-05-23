@@ -13,25 +13,21 @@ core_pattern_backup=$(cat /proc/sys/kernel/core_pattern)
 scaling_governor_backup=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)
 
 # create reset script accoring to the default config
-echo
 if [ ! -e "$reset_script" ]
 then
-  reset_content="\"#!/bin/sh
-  set -eu
-  echo \"$core_pattern_backup\" >/proc/sys/kernel/core_pattern
-  echo \"$scaling_governor_backup\" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor\""
-  srescmd="echo $reset_content > $reset_script"
-  su "$USER" sh -c "$srescmd"
+  su "$USER" sh -c "cat > $reset_script <<-EOF
+#!/bin/sh
+set -eu
+echo '$core_pattern_backup' >/proc/sys/kernel/core_pattern
+echo $scaling_governor_backup | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+EOF
+"
   chmod +x "$reset_script"
 else
   echo "$reset_script script already done"
 fi
 
-# Performance factors improvement
-echo core >/proc/sys/kernel/core_pattern
-echo performance | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-
-
+# Other Performance factors improvement
 #   - Transparent huge pages. Some allocators, such as jemalloc, can incur a
 #     heavy fuzzing penalty when transparent huge pages (THP) are enabled in the
 #     kernel. You can disable this via:
