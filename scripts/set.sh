@@ -27,6 +27,9 @@ else
   echo "$reset_script script already done"
 fi
 
+echo core >/proc/sys/kernel/core_pattern
+echo performance | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+
 # Other Performance factors improvement
 #   - Transparent huge pages. Some allocators, such as jemalloc, can incur a
 #     heavy fuzzing penalty when transparent huge pages (THP) are enabled in the
