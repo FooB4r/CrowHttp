@@ -30,9 +30,7 @@ let string_of_corequest r =
   (r |> Request.meth |> Code.string_of_method)^" "^
   (r |> Request.resource)^" "^
   (r |> Request.version |> Code.string_of_version)^"\n"^
-  (r |> Request.headers |> Header.to_string)^"\n"^
-  (r |> Request.encoding |> Transfer.string_of_encoding))
-
+  (r |> Request.headers |> Header.to_string))
 
 (* httpaf request *)
 (*
@@ -55,3 +53,9 @@ let af_target = "/"
 
 let httpaf_request = Request.create ~version:af_version ~headers:af_headers
   af_meth af_target
+
+let print_part_http_test =
+  let core = Part_gen.cohttp_request in
+  let afre = Part_gen.httpaf_request in
+  Printf.printf ">cohttp dummy:\n%s\n>httpaf dummy:\n" (Part_gen.string_of_corequest core);
+  Httpaf.Request.pp_hum Format.std_formatter afre

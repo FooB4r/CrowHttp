@@ -2,16 +2,6 @@ open Http_gen
 open Cohttp_test
 open Httpaf_test
 
-
-
-(**)
-let part_http_test =
-  let core = Part_gen.cohttp_request in
-  let afre = Part_gen.httpaf_request in
-  Printf.printf ">cohttp dummy:\n%s\n>httpaf fummy:\n%s\n"
-    (Part_gen.string_of_corequest core) (Httpaf.Request.pp_hum afre)
-(**)
-
 let okResponse = "HTTP/1.1 200 OK"
 let portNumber = 8000
 let verbosity = ref false
