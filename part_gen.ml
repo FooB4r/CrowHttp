@@ -1,3 +1,14 @@
+(** Generates separately each components needed to create a resquest using
+    Crowbar (Http_gen)
+    List of components that need generation
+    - Method
+    - Ressource/target/uri
+    - Version
+    - Headers
+    *)
+
+open Http_gen
+
 (* cohttp request *)
 (*
   type t = {
@@ -42,14 +53,13 @@ type t =
 *)
 open Httpaf
 
-let af_headers = Headers.empty
-(*Header.of_list (name*value) list*)
-
 let af_meth = Method.of_string "GET"
+
+let af_target = "/"
 
 let af_version = Version.of_string "HTTP/1.1"
 
-let af_target = "/"
+let af_headers = Headers.empty
 
 let httpaf_request = Request.create ~version:af_version ~headers:af_headers
   af_meth af_target

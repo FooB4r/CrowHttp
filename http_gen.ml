@@ -1,6 +1,9 @@
 (* =-=-=-=-=-=-=-=-=-= Generates http messages =-=-=-=-=-=-=-=-=-= *)
 open Crowbar
 
+type 'a gen = 'a Crowbar.gen
+(* module Generator : Http_gen = struct *)
+
 let empty = const ""
 
 (* Concat operator for string gen *)
@@ -101,9 +104,9 @@ let comment = concat_gen_list lws_star [
     const ")"
   ]
 
-(* let http_version =
-  concat_gen_list ows [const "HTTP"; const "/"; number; const "."; number] *)
-let http_version = concat_gen_list ows [const "HTTP"; const "/"; const "1"; const "."; const "1"]
+let http_version =
+  concat_gen_list ows [const "HTTP"; const "/"; number; const "."; number]
+(* let http_version = concat_gen_list ows [const "HTTP"; const "/"; const "1"; const "."; const "1"] *)
 
 let uri = const "#URI#"
 let http_url = const "#http_url#"
@@ -113,66 +116,9 @@ let rfc850_date = const "Sunday, 06-Nov-94 08:49:37 GMT"
 let asctime_date = const "Sun Nov 6 08:49:37 1994"
 let date = choose [rfc1123_date; rfc850_date; asctime_date]
 
-(* split the string s at the index n *)
-let split_at s index =
-  let length = String.length s in
-  let index = max 1 (min (length - 2) index) in
-  ((String.sub s 0 index), (String.sub s index (String.length s - index)))
-
-(* str -> int list -> str list -- [split_at_n str indexes] *)
-(* Splits [str] at all [indexes] once and returns the list of splitted parts *)
-(* split_at_n "hello" [1;3;3;5] -> ["h";"el";"lo";""] *)
-let split_at_n s indexes =
-  if String.length s < 2 then [s] (* avoid early msg end *)
-  else
-    let indexes = List.sort_uniq (fun a b -> b - a) indexes in
-    let rec _split_at_n s ids acc =
-      match ids with
-      | [] -> s::acc
-      | id::nextids -> let (s1,s2) = split_at s id in
-        _split_at_n s1 nextids (s2::acc)
-    in
-    _split_at_n s indexes []
-
-
-(* 20 random list of 10 numbers in [0;99] *)
-(* https://www.random.org/integer-sets/ *)
-let rdm_lists = [
-  const [80; 93; 35; 63; 27; 37; 90; 16; 46; 13];
-  const [12; 94; 11; 61; 73; 60; 37; 40; 47; 79];
-  const [39; 15; 98; 25; 3; 21; 34; 93; 16; 81];
-  const [21; 62; 39; 33; 17; 12; 48; 22; 54; 10];
-  const [6; 32; 41; 10; 35; 23; 63; 73; 83; 37];
-  const [99; 51; 87; 35; 26; 78; 24; 83; 94; 19];
-  const [10; 12; 70; 52; 15; 64; 49; 44; 62; 6];
-  const [78; 13; 10; 3; 82; 26; 8; 18; 80; 11];
-  const [65; 11; 0; 39; 73; 53; 97; 30; 54; 56];
-  const [86; 28; 96; 13; 32; 1; 47; 51; 20; 77];
-  const [58; 50; 82; 90; 39; 94; 23; 72; 32; 18];
-  const [12; 35; 43; 92; 7; 67; 52; 88; 72; 34];
-  const [85; 39; 46; 15; 72; 16; 53; 23; 5; 8];
-  const [54; 47; 79; 45; 46; 73; 50; 31; 74; 1];
-  const [24; 99; 77; 43; 45; 55; 0; 13; 31; 72];
-  const [24; 69; 21; 58; 75; 76; 93; 36; 26; 80];
-  const [14; 97; 69; 25; 11; 89; 20; 79; 23; 26];
-  const [66; 64; 78; 83; 44; 51; 60; 58; 43; 75];
-  const [4; 93; 28; 81; 75; 5; 72; 86; 96; 65];
-  const [89; 26; 72; 55; 93; 14; 21; 47; 82; 28]
-]
-
-let rdm_list = choose rdm_lists
-
-(* Adds lws_star between words *)
-(* TODO: to split generate the headers separetly and an random number list *)
-(* Then in ocaml call the function split_at_n <genHeader> <RdmList>*)
-(* separetly generate the rest if the message and concat the whole processed pieces *)
-let split_content sep str split =
-  let splitted = map [str; split] (fun str spl -> split_at_n str spl) in
-  map [sep; splitted] String.concat
-
 (*  Make a http header called <name> with <content> as a content *)
 let make_header sep name content =
-  const name ^^ const ":" ^^ (optional lws) ^^ (split_content sep content rdm_list)
+  const name ^^ const ":" ^^ (optional lws) ^^ content
 
 (* /!\ MOST OF THE RULES ARE SIMPLIFIED /!\ *)
 let gh_cache_control = make_header lws_star "Cache-Control" (const "no-cache")
@@ -325,9 +271,46 @@ let http_method = choose [const "OPTIONS"; const "GET"; const "HEAD"; const "POS
 let request_line = (* Section 5.1 *)
   http_method ^^ sp ^^ request_target ^^  sp ^^ http_version ^^ crlf
 
-let request = (* Section 5 *)
-  request_line ^^ request_body ^^ (optional (message_body ^^ crlf)) ^^ crlf
-
 let not_a_request = const "Not a http request"
 let test_request = const "GET / HTTP/1.1" ^^ crlf ^^ crlf
-let http_message = request (* We are only interested in requests not responses *)
+
+let meth () = http_method
+let uri () = const "##uri"
+let version () = http_version
+let header () = choose [general_header; request_header; entity_header]
+let headers () = list(header ())
+
+let request () = (* Section 5 *)
+  request_line ^^ request_body ^^ (optional (message_body ^^ crlf)) ^^ crlf
+
+let response () = const "Not yet implemented"
+
+(* split the string s at the index n *)
+let split_at s index =
+  let length = String.length s in
+  let index = max 1 (min (length - 2) index) in
+  ((String.sub s 0 index), (String.sub s index (String.length s - index)))
+
+(* str -> int list -> str list -- [split_at_n str indexes] *)
+(* Splits [str] at all [indexes] once and returns the list of splitted parts *)
+(* split_at_n "hello" [1;3;3;5] -> ["h";"el";"lo";""] *)
+let split_at_n s indexes =
+  if String.length s < 2 then [s] (* avoid early msg end *)
+  else
+    let indexes = List.sort_uniq (fun a b -> b - a) indexes in
+    let rec _split_at_n s ids acc =
+      match ids with
+      | [] -> s::acc
+      | id::nextids -> let (s1,s2) = split_at s id in
+        _split_at_n s1 nextids (s2::acc)
+    in
+    _split_at_n s indexes []
+
+let split_header header indexes =
+  let content = match String.index_opt ':' header with
+    | Some index -> String.sub index (String.length - index) header
+    | None -> failwith "Http_gen.split_header: arg [header] not a header"
+  in
+  match indexes with
+  | h::t -> split_at_n content indexes
+  | [] -> content
