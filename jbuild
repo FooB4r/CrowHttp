@@ -1,7 +1,7 @@
 (jbuild_version 1)
 
 (executables
- ((names (main cohttp_server cohttp_client))
+ ((names (main cohttp_server cohttp_client httpaf_server))
  (libraries (crowbar cohttp.lwt httpaf)))
 )
 

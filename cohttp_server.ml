@@ -1,8 +1,7 @@
 (* server_example.ml - TCP & Lwt *)
 open Lwt
 open Cohttp
-(* module Str_server = Cohttp_lwt_unix.Server *)
-(* module Str_server = Cohttp_lwt.Server.Make(String_io) *)
+
 module Str_Server = Cohttp_lwt.S.Server(String_io)
 
 let callback _conn req body =
