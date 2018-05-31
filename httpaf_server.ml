@@ -32,22 +32,16 @@ let echo_handler got_eof reqd =
 (* let () =
   let sc = Server_connection.create (handler "") in *)
 
-(* A bit of a trick *)
+
 let request_to_string r =
-  let buf = Buffer.create 40 in
-  let formatter = Format.formatter_of_buffer buf in
-  Httpaf.Request.pp_hum formatter r;
-  let res = Buffer.contents buf in
-  Buffer.clear buf;
-  res
+  let f = Faraday.create 0x1000 in
+  Httpaf.Httpaf_private.Serialize.write_request f r;
+  Faraday.serialize_to_string f
 
 let response_to_string r =
-  let buf = Buffer.create 40 in
-  let formatter = Format.formatter_of_buffer buf in
-  Httpaf.Response.pp_hum formatter r;
-  let res = Buffer.contents buf in
-  Buffer.clear buf;
-  res
+  let f = Faraday.create 0x1000 in
+  Httpaf.Httpaf_private.Serialize.write_response f r;
+  Faraday.serialize_to_string f
 
 let body_to_strings = function
   | `Empty       -> []
@@ -143,10 +137,14 @@ let test_server ~input ~output ~handler () =
   in
   let test_output = loop conn bigstring_empty reads |> String.concat "" in
   let output      = String.concat "" writes in
-  Printf.printf "test_output: %s" test_output;
-  Printf.printf "output: %s" output
+  Printf.printf "test_output:<%s>\n" test_output;
+  Printf.printf "output:<%s>\n" output
 
-let gogo () = test_server
-  ~handler: (echo_handler (ref false))
-  ~input:   [(`Request (Request.create `GET "/")), `Empty]
+(* TODO instrument this and automate the making of requests *)
+let gogo =
+  test_server
+  (* ~handler: (echo_handler (ref false)) *)
+  ~handler: (handler "")
+  ~input:   [(`Request (Request.create `GET "img/camel.jpg")), `Empty]
   ~output:  [(`Response (Response.create `OK) ), `Empty]
+  ()
