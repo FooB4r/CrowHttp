@@ -1,4 +1,3 @@
-open Http_gen
 open Cohttp_test
 open Httpaf_test
 
@@ -11,6 +10,19 @@ let print_cond a =
     Printf.printf a
   else
     (fun _ -> ())
+
+let string_of_corequest r =
+  Printf.sprintf "%s" (
+  (r |> Cohttp.Request.meth |> Cohttp.Code.string_of_method)^" "^
+  (r |> Cohttp.Request.resource)^" "^
+  (r |> Cohttp.Request.version |> Cohttp.Code.string_of_version)^"\n"^
+  (r |> Cohttp.Request.headers |> Cohttp.Header.to_string))
+
+let print_cohttp_request r =
+  Printf.printf "%s" (string_of_corequest r)
+
+let print_httpaf_request r =
+  Httpaf.Request.pp_hum Format.std_formatter r
 
 (* http processing *)
 (* returns [str] from begining to the first occurence of \n *)
@@ -27,9 +39,6 @@ let pp_http ppf http =
 let eq_http response_str expected =
   let fst_line = get_first_line response_str in
   String.equal fst_line expected
-
-let xor_bool out1 out2 =
-  (out1 = out2)
 
 let print_status status =
   print_cond "STATUS: %s\n" (string_of_cohttp_status status)
@@ -49,14 +58,22 @@ let () =
       print_help ();
   done;
   print_cond "%s\n%!" "Starting the tests...";
-  Crowbar.add_test ~name:"http" [http_message] @@ (fun http ->
-    print_cond "[===-TESTING-===]\n%s\n" http;
-    let co_status = read_request_cohttp http in
-    let af_status = read_request_httpaf http in
-    print_cond "%s\n" "[---cohttp-Status---]";
-    print_cond "%s\n" (string_of_cohttp_status co_status);
-    print_cond "%s\n" "[---httpaf-Status---]";
-    print_cond "%s/" (string_of_httpaf_status af_status);
-    print_cond "%d\n" (String.length http);
-    let are_same = xor_bool (bool_of_retCode co_status) (bool_of_httpaf af_status) in
-    Crowbar.check are_same);
+  let meth = Http_gen.meth in
+  let target = Http_gen.uri in
+  let version = Http_gen.version in
+  let headers = Http_gen.headers in
+  Crowbar.add_test ~name:"http" [meth; target; version; headers] @@
+  (fun meth target version headers ->
+      let req = Part_gen.make_request ~meth ~target ~version ~headers in
+      Printf.printf "%s\n\n" (Part_gen.to_string req);
+      let coreq = Part_gen.cohttp_request_opt req in
+      let afreq = Part_gen.httpaf_request_opt req in
+      match coreq, afreq with
+      | Some _, None -> Crowbar.fail "Httpaf failed to create | Cohttp created"
+      | None, Some _ -> Crowbar.fail "Cohttp failed to create | Httpaf created"
+      (* maybe add a test to see where it failed and compare *)
+      (* with few tests it seems that cohttp never raises exceptions when creating requests *)
+      | None, None -> Printf.printf "Both lib failed to create"; Crowbar.check true
+      (* TODO: Get server's answer and compare *)
+      | Some coreq, Some afcoreq ->  Printf.printf "Both lib created the request";Crowbar.check true
+    );

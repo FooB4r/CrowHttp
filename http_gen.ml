@@ -2,7 +2,6 @@
 open Crowbar
 
 type 'a gen = 'a Crowbar.gen
-(* module Generator : Http_gen = struct *)
 
 let empty = const ""
 
@@ -118,7 +117,9 @@ let date = choose [rfc1123_date; rfc850_date; asctime_date]
 
 (*  Make a http header called <name> with <content> as a content *)
 let make_header sep name content =
-  const name ^^ const ":" ^^ (optional lws) ^^ content
+  let name = const name in
+  let content = (optional lws) ^^ content in
+  map [name; content] (fun name content -> (name, content))
 
 (* /!\ MOST OF THE RULES ARE SIMPLIFIED /!\ *)
 let gh_cache_control = make_header lws_star "Cache-Control" (const "no-cache")
@@ -218,10 +219,9 @@ let entity_header = choose [
 ]
 
 (* @debug: if doesn't generate a lot change list -> list1 to force it *)
-let request_body = concat_list_gen empty (
-  list(choose [general_header; request_header; entity_header] ^^ crlf))
+let request_body = list(choose [general_header; request_header; entity_header])
 
-let full_request_body = concat_gen_list lws_star [
+(* let full_request_body = concat_gen_list lws_star [
   gh_cache_control; crlf;
   gh_connection; crlf;
   gh_date; crlf;
@@ -252,7 +252,7 @@ let full_request_body = concat_gen_list lws_star [
   eh_content_type; crlf;
   eh_expires; crlf;
   eh_last_modified; crlf
-]
+] *)
 
 let entity_body = concat_list_gen empty (list1 octet) (* WARNING this yield anything *)
 let big_entity_body = concat_gen_list empty (list_gen_sized 20 octet)
@@ -274,16 +274,31 @@ let request_line = (* Section 5.1 *)
 let not_a_request = const "Not a http request"
 let test_request = const "GET / HTTP/1.1" ^^ crlf ^^ crlf
 
-let meth () = http_method
-let uri () = const "##uri"
-let version () = http_version
-let header () = choose [general_header; request_header; entity_header]
-let headers () = list(header ())
+let concat_header_gen header =
+  map [header] (fun (k, v) -> k ^ v)
 
-let request () = (* Section 5 *)
-  request_line ^^ request_body ^^ (optional (message_body ^^ crlf)) ^^ crlf
+let concat_headers headers =
+  List.fold_left (fun acc (k, v) ->
+    acc ^ k ^ ":" ^ v ^ "\r\n"
+  ) "" headers
 
-let response () = const "Not yet implemented"
+let concat_headers_gen headers =
+  map [headers] (fun headers ->
+    List.fold_left (fun acc (k, v) ->
+      acc ^ k ^ ":" ^ v ^ "\r\n"
+    ) "" headers
+  )
+
+let meth = http_method
+let uri = const "##uri"
+let version = http_version
+let header = choose [general_header; request_header; entity_header]
+let headers = list header
+
+let request = (* Section 5 *)
+  request_line ^^ (concat_headers_gen request_body) ^^ (optional (message_body ^^ crlf)) ^^ crlf
+
+let response = const "Not yet implemented"
 
 (* split the string s at the index n *)
 let split_at s index =
@@ -307,10 +322,10 @@ let split_at_n s indexes =
     _split_at_n s indexes []
 
 let split_header header indexes =
-  let content = match String.index_opt ':' header with
-    | Some index -> String.sub index (String.length - index) header
+  let content = match String.index_opt header ':' with
+    | Some index -> String.sub header index (String.length header - index)
     | None -> failwith "Http_gen.split_header: arg [header] not a header"
   in
   match indexes with
   | h::t -> split_at_n content indexes
-  | [] -> content
+  | [] -> [content]

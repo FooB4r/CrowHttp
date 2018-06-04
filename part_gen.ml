@@ -1,13 +1,21 @@
-(** Generates separately each components needed to create a resquest using
-    Crowbar (Http_gen)
-    List of components that need generation
-    - Method
-    - Ressource/target/uri
-    - Version
-    - Headers
-    *)
+type pg_request = {
+  pg_method : string;
+  pg_target : string;
+  pg_version: string;
+  pg_headers: (string * string) list
+}
 
-open Http_gen
+let make_request ~meth ~target ~version ~headers =
+  {
+    pg_method = meth;
+    pg_target = target;
+    pg_version = version;
+    pg_headers = headers
+  }
+
+let to_string req =
+  req.pg_method ^ " " ^ req.pg_target ^ " " ^ req.pg_version ^ "\r\n" ^
+  (Http_gen.concat_headers req.pg_headers)
 
 (* cohttp request *)
 (*
@@ -21,27 +29,28 @@ open Http_gen
 *)
 open Cohttp
 
-let co_headers = Header.init ()
+let co_meth meth = Code.method_of_string meth
+let co_uri uri = Uri.of_string uri
+let co_version version = Code.version_of_string version
+let co_headers headers = Header.of_list headers
 
-let co_meth = Code.method_of_string "GET"
+let cohttp_request req =
+  Printexc.print (fun meth target version headers ->
+      Request.make
+        ~meth:(co_meth meth)
+        ~version:(co_version version)
+        ~headers:(co_headers headers)
+        ~encoding:Transfer.Unknown
+        (co_uri target)
+  ) req.pg_method req.pg_target req.pg_version req.pg_headers
 
-let co_ressource = "/"
 
-let co_version = Code.version_of_string "HTTP/1.1"
+let cohttp_request_opt req =
+  try
+    Some (cohttp_request req)
+  with
+  | _ -> None
 
-let co_encoding = Transfer.Unknown
-
-let co_uri = Uri.of_string "/"
-
-let cohttp_request = Request.make ~meth:co_meth ~version:co_version
-  ~headers:co_headers ~encoding:co_encoding co_uri
-
-let string_of_corequest r =
-  Printf.sprintf "%s" (
-  (r |> Request.meth |> Code.string_of_method)^" "^
-  (r |> Request.resource)^" "^
-  (r |> Request.version |> Code.string_of_version)^"\n"^
-  (r |> Request.headers |> Header.to_string))
 
 (* httpaf request *)
 (*
@@ -53,19 +62,21 @@ type t =
 *)
 open Httpaf
 
-let af_meth = Method.of_string "GET"
+let af_meth meth = Method.of_string meth
+let af_version version = Version.of_string version
+let af_headers headers = Headers.of_list headers
 
-let af_target = "/"
+let httpaf_request req =
+  Printexc.print (fun meth target version headers ->
+    Request.create
+      ~version:(af_version version)
+      ~headers:(af_headers headers)
+      (af_meth meth)
+      target
+  ) req.pg_method req.pg_target req.pg_version req.pg_headers
 
-let af_version = Version.of_string "HTTP/1.1"
-
-let af_headers = Headers.empty
-
-let httpaf_request = Request.create ~version:af_version ~headers:af_headers
-  af_meth af_target
-
-let print_part_http_test =
-  let core = Part_gen.cohttp_request in
-  let afre = Part_gen.httpaf_request in
-  Printf.printf ">cohttp dummy:\n%s\n>httpaf dummy:\n" (Part_gen.string_of_corequest core);
-  Httpaf.Request.pp_hum Format.std_formatter afre
+let httpaf_request_opt req =
+  try
+    Some (httpaf_request req)
+  with
+  | _ -> None
