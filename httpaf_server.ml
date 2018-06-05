@@ -1,37 +1,20 @@
 open Httpaf
 
+let debug msg =
+  if false then Printf.eprintf "%s\n%!" msg
+
 let handler body reqd =
   (* let {meth; target; version; headers} = Reqd.request redq in *)
   let request_body = Reqd.request_body reqd in
   let request = Reqd.request reqd in
   let response =
-    Printf.printf "target: %s" request.target;
     if request.target = "img/camel.jpg" && request.meth = `GET then
-      Response.create `OK
+      Response.create ~headers:Headers.(of_list ["target", request.target]) `OK
     else
-      Response.create `Not_found
+      Response.create ~headers:Headers.(of_list ["target", request.target]) `Not_found
     in
   Body.close_reader request_body;
   Reqd.respond_with_string reqd response body
-
-let debug msg =
-  if true then Printf.eprintf "%s\n%!" msg
-
-let echo_handler got_eof reqd =
-  debug " > echo_handler called";
-  let request_body  = Reqd.request_body reqd in
-  let response      = Response.create ~headers:Headers.(of_list ["connection", "close"]) `OK in
-  let response_body = Reqd.respond_with_streaming reqd response in
-  let rec on_read buffer ~off ~len =
-    Body.write_string response_body (Bigstring.to_string ~off ~len buffer);
-    Body.flush response_body (fun () ->
-      Body.schedule_read request_body ~on_eof ~on_read)
-  and on_eof () = got_eof := true; Body.close_writer response_body in
-  Body.schedule_read request_body ~on_eof ~on_read
-
-(* let () =
-  let sc = Server_connection.create (handler "") in *)
-
 
 let request_to_string r =
   let f = Faraday.create 0x1000 in
@@ -72,10 +55,8 @@ let bigstring_append_string bs s =
 
 let bigstring_empty = Bigstring.of_string ""
 
-let test_server ~input ~output ~handler () =
+let test_server ~conn ~input ~handler () =
   let reads  = List.(concat (map case_to_strings input)) in
-  let writes = List.(concat (map case_to_strings output)) in
-  let conn   = Server_connection.create handler in
   let iwait, owait = ref false, ref false in
   let rec loop conn input reads =
     if !iwait && !owait then
@@ -135,16 +116,9 @@ let test_server ~input ~output ~handler () =
         Server_connection.report_write_result conn (`Ok (IOVec.lengthv iovecs));
         output
   in
-  let test_output = loop conn bigstring_empty reads |> String.concat "" in
-  let output      = String.concat "" writes in
-  Printf.printf "test_output:<%s>\n" test_output;
-  Printf.printf "output:<%s>\n" output
+  loop conn bigstring_empty reads |> String.concat ""
 
-(* TODO instrument this and automate the making of requests *)
-let gogo =
-  test_server
-  (* ~handler: (echo_handler (ref false)) *)
-  ~handler: (handler "")
-  ~input:   [(`Request (Request.create `GET "img/camel.jpg")), `Empty]
-  ~output:  [(`Response (Response.create `OK) ), `Empty]
-  ()
+let create_connection () = Server_connection.create (handler "")
+
+let test_request conn req =
+  test_server ~conn ~input:[req] ()
