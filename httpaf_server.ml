@@ -55,7 +55,7 @@ let bigstring_append_string bs s =
 
 let bigstring_empty = Bigstring.of_string ""
 
-let test_server ~conn ~input ~handler () =
+let test_server ~conn ~input () =
   let reads  = List.(concat (map case_to_strings input)) in
   let iwait, owait = ref false, ref false in
   let rec loop conn input reads =

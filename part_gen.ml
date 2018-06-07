@@ -15,7 +15,7 @@ let make_request ~meth ~target ~version ~headers =
 
 let to_string req =
   req.pg_method ^ " " ^ req.pg_target ^ " " ^ req.pg_version ^ "\r\n" ^
-  (Http_gen.concat_headers req.pg_headers)
+  (Http_gen.concat_headers req.pg_headers) ^ "\r\n\r\n"
 
 (* cohttp request *)
 (*

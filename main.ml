@@ -5,11 +5,15 @@ let okResponse = "HTTP/1.1 200 OK"
 let portNumber = 8000
 let verbosity = ref false
 
-let print_cond a =
-  if !verbosity then
-    Printf.printf a
-  else
-    (fun _ -> ())
+let target = "#"
+
+let m_request target = Part_gen.make_request
+  ~meth:"GET" ~target ~version:"HTTP/1.1" ~headers:[("Connection", "close")]
+
+let request = m_request target
+
+let debug msg =
+  if !verbosity then Printf.eprintf "%s\n%!" msg
 
 let string_of_corequest r =
   Printf.sprintf "%s" (
@@ -40,8 +44,33 @@ let eq_http response_str expected =
   let fst_line = get_first_line response_str in
   String.equal fst_line expected
 
-let print_status status =
-  print_cond "STATUS: %s\n" (string_of_cohttp_status status)
+
+let test_httpaf conn req =
+  let afreq = Part_gen.httpaf_request_opt req in
+  match afreq with
+  | Some req ->
+    let afres = Httpaf_server.test_request conn (`Request req, `Empty) in
+    let len = String.length afres in
+    if len > 0 then (
+      debug ((string_of_int len)^">"^afres); Some afres
+    ) else (
+      debug "Httpaf didn't parse"; None
+    )
+  | None -> debug "Httpaf didn't parse"; None
+
+let test_cohttp req =
+  let coreq = Part_gen.cohttp_request_opt req in
+  match coreq with
+  | None -> failwith "Cohttp didn't parse (NONE)" (* fail because this never happens *)
+  | _ -> ();
+  let sreq = (Part_gen.to_string req) in
+  let cores = Clients.one_time_client portNumber sreq in
+  let len = String.length cores in
+  if len > 0 then (
+    debug ((string_of_int len)^">"^cores); Some cores
+  ) else (
+    debug "Cohttp didn't parse"; None
+  )
 
 let print_help () =
   Printf.printf "%s\n" Sys.argv.(0);
@@ -57,23 +86,23 @@ let () =
     if Sys.argv.(i) = "-h" || Sys.argv.(i) = "--help" then
       print_help ();
   done;
-  print_cond "%s\n%!" "Starting the tests...";
+  Printf.printf "Starting the tests...\n";
   let meth = Http_gen.meth in
   let target = Http_gen.uri in
   let version = Http_gen.version in
   let headers = Http_gen.headers in
+  let afserv = Httpaf_server.create_connection () in
+  (* Cohttp_server.create_server portNumber; *)
   Crowbar.add_test ~name:"http" [meth; target; version; headers] @@
   (fun meth target version headers ->
-      let req = Part_gen.make_request ~meth ~target ~version ~headers in
-      Printf.printf "%s\n\n" (Part_gen.to_string req);
-      let coreq = Part_gen.cohttp_request_opt req in
-      let afreq = Part_gen.httpaf_request_opt req in
-      match coreq, afreq with
-      | Some _, None -> Crowbar.fail "Httpaf failed to create | Cohttp created"
-      | None, Some _ -> Crowbar.fail "Cohttp failed to create | Httpaf created"
-      (* maybe add a test to see where it failed and compare *)
-      (* with few tests it seems that cohttp never raises exceptions when creating requests *)
-      | None, None -> Printf.printf "Both lib failed to create"; Crowbar.check true
-      (* TODO: Get server's answer and compare *)
-      | Some coreq, Some afcoreq ->  Printf.printf "Both lib created the request";Crowbar.check true
-    );
+    let req = Part_gen.make_request ~meth ~target ~version ~headers in
+    debug "===========TEST REQUEST===========";
+    debug (Part_gen.to_string req);
+    let afstats = test_httpaf afserv req in
+    let costats = test_cohttp req in
+    debug "\n";
+    match costats, afstats with
+    | Some cores, Some afres -> Crowbar.check true (* TODO check *)
+    | None, None -> Crowbar.check true
+    | _ -> Crowbar.check false
+  );

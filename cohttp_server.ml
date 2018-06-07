@@ -1,8 +1,7 @@
-(* server_example.ml - TCP & Lwt *)
-open Lwt
 open Cohttp
+open Cohttp_lwt_unix
 
-module Str_Server = Cohttp_lwt.S.Server(String_io)
+(* module Str_server = Cohttp_lwt.Make_server(String_io) *)
 
 let callback _conn req body =
   let uri = req |> Request.uri |> Uri.to_string in
@@ -10,29 +9,59 @@ let callback _conn req body =
   let headers = req |> Request.headers |> Header.to_string in
   let body = Cohttp_lwt.Body.to_string body in
   (uri, meth, headers, body) |> (fun (uri, meth, headers, body) ->
-    if uri = "//img/camel.jpg" && meth = "GET" then
-      (*make a body from the image*)
-      Str_server.respond_file "img/camel.jpg" ()
+    if uri = "http://127.0.0.1:8000/img/camel.jpg" && meth = "GET" then
+      Server.respond_file "img/camel.jpg" ()
     else
       let ret_info = Printf.sprintf "Not Found\r\n\nuri: %s\nmeth: %s" uri meth in
-      Str_server.respond_string ~status:(`Code 404) ~body:ret_info ())
+      Server.respond_string ~status:(`Code 404) ~body:ret_info ())
 
 let make_server port =
-  Str_server.create ~mode:(`TCP (`Port port)) (Str_server.make ~callback ())
+  Server.create ~mode:(`TCP (`Port port)) (Server.make ~callback ())
 
 let make_unix_socket_server =
-  Str_server.create ~mode:(`Unix_domain_socket (`File "cohttp_uds"))
-    (Str_server.make ~callback ())
+  Server.create ~mode:(`Unix_domain_socket (`File "cohttp_uds"))
+    (Server.make ~callback ())
 
 let cohttp_serv port =
-  let server = make_unix_socket_server in
+  let server = make_server port in
   ignore (Lwt_main.run server)
 
-let () = cohttp_serv 8000
+let create_server = cohttp_serv 8000
 
-
-
+let () = create_server
 (******************************************************************************)
+(* let handler ~body:_ _sock req =
+  let uri = Cohttp.Request.uri req in
+  match Uri.path uri with
+  | "/test" ->
+       Uri.get_query_param uri "hello"
+    |> Base.Option.map ~f:(fun v -> "hello: " ^ v)
+    |> Base.Option.value ~default:"No param hello supplied"
+    |> Server.respond_string
+  | _ ->
+    Server.respond_string ~status:`Not_found "Route not found"
+
+let start_server port () =
+  Caml.Printf.eprintf "Listening for HTTP on port %d\n" port;
+  Caml.Printf.eprintf "Try 'curl http://localhost:%d/test?hello=xyz'\n%!" port;
+  Cohttp_async.Server.create ~on_handler_error:`Raise
+    (Async_extra.Tcp.Where_to_listen.of_port port) handler
+  >>= fun _ -> Deferred.never ()
+
+
+let tcp_CAC () =
+  let module Command = Async_extra.Command in
+  Command.async_spec
+    ~summary:"Start a hello world Async server"
+    Command.Spec.(
+      empty +>
+      flag "-p" (optional_with_default 8080 int)
+        ~doc:"int Source port to listen on"
+    ) start_server
+
+  |> Command.run *)
+
+
 (* cohttp_server using async *)
 (* open Base
 open Async_kernel
