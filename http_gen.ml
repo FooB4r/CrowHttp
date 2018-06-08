@@ -290,7 +290,7 @@ let concat_headers_gen headers =
   )
 
 let meth = http_method
-let uri = const "##uri"
+let uri = request_target
 let version = http_version
 let header = choose [general_header; request_header; entity_header]
 let headers = list header

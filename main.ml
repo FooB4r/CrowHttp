@@ -4,8 +4,9 @@ open Httpaf_test
 let okResponse = "HTTP/1.1 200 OK"
 let portNumber = 8000
 let verbosity = ref false
+let log = ref false
 
-let target = "#"
+let target = "http://127.0.0.1:8000/img/camel.jpg"
 
 let m_request target = Part_gen.make_request
   ~meth:"GET" ~target ~version:"HTTP/1.1" ~headers:[("Connection", "close")]
@@ -44,6 +45,22 @@ let eq_http response_str expected =
   let fst_line = get_first_line response_str in
   String.equal fst_line expected
 
+let log_file req =
+  (* create dir if it doesn't exists *)
+  let _safe_mkdir name =
+    try Unix.mkdir name 0o771 with
+    | Unix.Unix_error(Unix.EEXIST, "mkdir", name) -> ()
+  in
+  _safe_mkdir "output";
+  _safe_mkdir "output/log";
+  let logDir = "output/log/" in
+  let filename = logDir ^ "request.crash.all" in
+  let len = (String.length req) in
+  let fd = Unix.openfile filename [Unix.O_WRONLY; O_CREAT; O_APPEND] 0o640 in
+  let wr = Unix.write fd req 0 len in
+  if len > wr then
+    Printf.eprintf "Error: Unable to write log files";
+  Unix.close fd
 
 let test_httpaf conn req =
   let afreq = Part_gen.httpaf_request_opt req in
@@ -52,7 +69,7 @@ let test_httpaf conn req =
     let afres = Httpaf_server.test_request conn (`Request req, `Empty) in
     let len = String.length afres in
     if len > 0 then (
-      debug ((string_of_int len)^">"^afres); Some afres
+      debug ("Httpaf: "^(string_of_int len)^">"^afres); Some afres
     ) else (
       debug "Httpaf didn't parse"; None
     )
@@ -67,7 +84,7 @@ let test_cohttp req =
   let cores = Clients.one_time_client portNumber sreq in
   let len = String.length cores in
   if len > 0 then (
-    debug ((string_of_int len)^">"^cores); Some cores
+    debug ("Cohttp: "^(string_of_int len)^">"^cores); Some cores
   ) else (
     debug "Cohttp didn't parse"; None
   )
@@ -85,6 +102,8 @@ let () =
       verbosity := true;
     if Sys.argv.(i) = "-h" || Sys.argv.(i) = "--help" then
       print_help ();
+    if Sys.argv.(i) = "--log-crashes" then
+      log := true
   done;
   Printf.printf "Starting the tests...\n";
   let meth = Http_gen.meth in
@@ -104,5 +123,6 @@ let () =
     match costats, afstats with
     | Some cores, Some afres -> Crowbar.check true (* TODO check *)
     | None, None -> Crowbar.check true
-    | _ -> Crowbar.check false
+    | _ -> if !log then log_file (Part_gen.to_string req);
+      Crowbar.check false
   );

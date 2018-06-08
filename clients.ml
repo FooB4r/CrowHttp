@@ -8,13 +8,6 @@ let reception_target = "img/camel.recv.jpg"
 let target           = "img/camel.jpg"
 let abs_target       = "http://127.0.0.1:8000/"^target
 let unix_target      = "file:///home/raph/Documents/TRAVAIL/OcamlLab/CrowHttp/img/camel.jpg"
-(*
-let ttarget1         = "http://127.0.0.1:8000/home/raph/Documents/TRAVAIL/OcamlLab/CrowHttp/img/camel.jpg"
-let ttarget2 =
-let ttarget3 =
-let ttarget4 =
-let ttarget5 =
-*)
 
 let md5_list = "img/camel.md5"
 
