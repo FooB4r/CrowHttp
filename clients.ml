@@ -1,35 +1,24 @@
 (* client_example.ml *)
-open Lwt
 open Cohttp
 open Cohttp_lwt_unix
 open Unix
+open Part_gen
 
-let reception_target = "img/camel.recv.jpg"
-let target           = "img/camel.jpg"
-let abs_target       = "http://127.0.0.1:8000/"^target
-let unix_target      = "file:///home/raph/Documents/TRAVAIL/OcamlLab/CrowHttp/img/camel.jpg"
+let abs_target target = "http://127.0.0.1:8000/"^target
 
 let md5_list = "img/camel.md5"
 
-(* Client.get ?ctx ?headers uri *)
+(* =-=-=-=-=-=-=-=-=-=-=- cohttp lwt client (CLC) -=-=-=-=-=-=-=-=-=-=-=-=-= *)
+let cohttp_call req =
+  Client.call
+    ~headers:(Header.of_list req.pg_headers)
+    ~body:`Empty
+    ~chunked:false
+    (Code.method_of_string req.pg_method)
+    (Uri.of_string (abs_target req.pg_target))
 
-(* =-=-=-=-=-=-=-=-=-=-=- cohttp lwt client -=-=-=-=-=-=-=-=-=-=-=-=-=-= *)
-let body =
-  Client.get (Uri.of_string abs_target) >>= fun (resp, body) ->
-  let code = resp |> Response.status |> Code.code_of_status in
-  Printf.printf "Response code: %d\n" code;
-  Printf.printf "Headers: %s\n" (resp |> Response.headers |> Header.to_string);
-  body |> Cohttp_lwt.Body.to_string >|= fun body ->
-  Printf.printf "Body of length: %d\n" (String.length body);
-  body
-
-let tcp_CLC () =
-  let body = Lwt_main.run body in
-  print_endline ("Received body\n" ^ body)
-
-(* =-=-=-=-=-=-=-=-=-=-=-=-cohttp async client-=-=-=-=-=-=-=-=-=-=-=-=-= *)
-
-(* let str_HAC () = *)
+let tcp_CLC req =
+  Lwt_main.run (cohttp_call req)
 
 (* =-=-=-=-=-=-=-=-=-=-=-Shell ocaml scripting-=-=-=-=-=-=-=-=-=-=-=-=-=-= *)
 let uds_SC () =

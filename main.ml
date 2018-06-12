@@ -16,12 +16,22 @@ let request = m_request target
 let debug msg =
   if !verbosity then Printf.eprintf "%s\n%!" msg
 
-let string_of_corequest r =
+let string_of_corequest req =
   Printf.sprintf "%s" (
-  (r |> Cohttp.Request.meth |> Cohttp.Code.string_of_method)^" "^
-  (r |> Cohttp.Request.resource)^" "^
-  (r |> Cohttp.Request.version |> Cohttp.Code.string_of_version)^"\n"^
-  (r |> Cohttp.Request.headers |> Cohttp.Header.to_string))
+    (req |> Cohttp.Request.meth |> Cohttp.Code.string_of_method)^" "^
+    (req |> Cohttp.Request.resource)^" "^
+    (req |> Cohttp.Request.version |> Cohttp.Code.string_of_version)^"\n"^
+    (req |> Cohttp.Request.headers |> Cohttp.Header.to_string)^"\r\n\r\n"
+  )
+
+let string_of_coresponse (resp, body) =
+  let sbody = Lwt_main.run (body |> Cohttp_lwt__.Body.to_string) in
+  Printf.sprintf "%s" (
+    (resp |> Cohttp.Response.version |> Cohttp.Code.string_of_version)^" "^
+    (resp |> Cohttp.Response.status |> Cohttp.Code.string_of_status)^"\r\n"^
+    (resp |> Cohttp.Response.headers |> Cohttp.Header.to_string)^"\r\n"^
+    sbody
+  )
 
 let print_cohttp_request r =
   Printf.printf "%s" (string_of_corequest r)
@@ -55,7 +65,7 @@ let log_file req =
   _safe_mkdir "output/log";
   let logDir = "output/log/" in
   let filename = logDir ^ "request.crash.all" in
-  let len = (String.length req) in
+  let len = String.length req in
   let fd = Unix.openfile filename [Unix.O_WRONLY; O_CREAT; O_APPEND] 0o640 in
   let wr = Unix.write fd req 0 len in
   if len > wr then
@@ -71,23 +81,22 @@ let test_httpaf conn req =
     if len > 0 then (
       debug ("Httpaf: "^(string_of_int len)^">"^afres); Some afres
     ) else (
-      debug "Httpaf didn't parse"; None
+      debug "Httpaf: 0>response empty"; None
     )
-  | None -> debug "Httpaf didn't parse"; None
+  | None -> debug "Httpaf didn't parse/create the request"; None
 
 let test_cohttp req =
   let coreq = Part_gen.cohttp_request_opt req in
   match coreq with
-  | None -> failwith "Cohttp didn't parse (NONE)" (* fail because this never happens *)
-  | _ -> ();
-  let sreq = (Part_gen.to_string req) in
-  let cores = Clients.one_time_client portNumber sreq in
-  let len = String.length cores in
-  if len > 0 then (
-    debug ("Cohttp: "^(string_of_int len)^">"^cores); Some cores
-  ) else (
-    debug "Cohttp didn't parse"; None
-  )
+  | Some r -> let cores = Clients.tcp_CLC req in
+    let sres = string_of_coresponse cores in
+    let len = String.length sres in
+    if len > 0 then (
+      debug ("Cohttp: "^(string_of_int len)^">"^sres); Some cores
+    ) else (
+      debug "Cohttp: 0>response empty"; None
+    )
+  | None -> failwith "Cohttp didn't parse/create the request (NONE)" (* fail because this never happens *)
 
 let print_help () =
   Printf.printf "%s\n" Sys.argv.(0);
