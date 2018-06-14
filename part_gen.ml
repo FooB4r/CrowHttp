@@ -44,13 +44,11 @@ let cohttp_request req =
         (co_uri target)
   ) req.pg_method req.pg_target req.pg_version req.pg_headers
 
-
 let cohttp_request_opt req =
   try
     Some (cohttp_request req)
   with
   | _ -> None
-
 
 (* httpaf request *)
 (*
