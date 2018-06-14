@@ -3,18 +3,42 @@ open Httpaf
 let debug msg =
   if false then Printf.eprintf "%s\n%!" msg
 
-let handler body reqd =
+let bigstring_append_string bs s =
+  Bigstring.of_string (Bigstring.to_string bs ^ s)
+
+let bigstring_empty = Bigstring.of_string ""
+
+(* to improve *)
+let bigstring_of_file filename =
+  let ic = open_in_bin filename in (* open as binary *)
+  let buffer = Bytes.create 1024 in
+  let rec read_file bsbuf =
+    let n = input ic buffer 0 1024 in
+    if n = 0 then bsbuf else
+      let rbuf = Bytes.sub buffer 0 n in
+      let bs = bigstring_append_string bsbuf (Bytes.to_string rbuf) in
+      read_file bs
+  in
+  let file = read_file bigstring_empty in
+  close_in ic;
+  file
+
+let handler got_eof reqd =
   (* let {meth; target; version; headers} = Reqd.request redq in *)
   let request_body = Reqd.request_body reqd in
   let request = Reqd.request reqd in
+  let headers = Headers.of_list [ ("meth",    Method.to_string request.meth);
+                                  ("target",  request.target)] in
   let response =
     if request.target = "img/camel.jpg" && request.meth = `GET then
-      Response.create ~headers:Headers.(of_list ["target", request.target]) `OK
+      Response.create ~headers `OK
     else
-      Response.create ~headers:Headers.(of_list ["target", request.target]) `Not_found
+      Response.create ~headers `Not_found
     in
-  Body.close_reader request_body;
-  Reqd.respond_with_string reqd response body
+  let response_body = Reqd.respond_with_streaming reqd response in
+  let body = bigstring_of_file "img/camel.jpg" in (*make it buffer by buffer*)
+  Body.write_bigstring response_body ~off:0 ~len:(Bigstring.length body) body;
+  Body.close_writer response_body
 
 let request_to_string r =
   let f = Faraday.create 0x1000 in
@@ -35,25 +59,12 @@ let body_to_strings = function
       [Printf.sprintf "%x\r\n" len; x; "\r\n"] @ acc)
     xs [ "0\r\n" ]
 
-(* let body_to_strings b = [()] *)
-
 let case_to_strings = function
   | `Request  r, body -> [request_to_string  r] @ (body_to_strings body)
   | `Response r, body -> [response_to_string r] @ (body_to_strings body)
 
-let response_stream_to_body (`Response response, body) =
-  let response = response_to_string response in
-  match body with
-  | `Empty  -> response
-  | `Fixed xs | `Chunked xs -> String.concat "" (response :: xs)
-
 let iovec_to_string { IOVec.buffer; off; len } =
   Bigstring.to_string ~off ~len buffer
-
-let bigstring_append_string bs s =
-  Bigstring.of_string (Bigstring.to_string bs ^ s)
-
-let bigstring_empty = Bigstring.of_string ""
 
 let test_server ~conn ~input () =
   let reads  = List.(concat (map case_to_strings input)) in
@@ -116,9 +127,9 @@ let test_server ~conn ~input () =
         Server_connection.report_write_result conn (`Ok (IOVec.lengthv iovecs));
         output
   in
-  loop conn bigstring_empty reads |> String.concat ""
+  loop conn bigstring_empty reads (*|> String.concat ""*)
 
-let create_connection () = Server_connection.create (handler "")
+let create_connection () = Server_connection.create (handler (ref false))
 
 let test_request conn req =
   test_server ~conn ~input:[req] ()
