@@ -184,7 +184,6 @@ let () =
   Crowbar.add_test ~name:"http" [meth; target; version; headers] @@
   (fun meth target version headers ->
     let req = Part_gen.make_request ~meth ~target ~version ~headers in
-    let req = good_request in
     debug "===========TEST REQUEST===========";
     debug (Part_gen.to_string req);
     debug "----------------------------------";
