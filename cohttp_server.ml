@@ -9,11 +9,11 @@ let callback _conn req body =
   let headers = req |> Request.headers |> Header.to_string in
   let body = Cohttp_lwt.Body.to_string body in
   (uri, meth, headers, body) |> (fun (uri, meth, headers, body) ->
-    if uri = "http://127.0.0.1:8000/img/camel.jpg" && meth = "GET" then
+    if uri = "//127.0.0.1:8000/img/camel.jpg" && meth = "GET" then
       Server.respond_file "img/camel.jpg" ()
     else
-      let ret_info = Printf.sprintf "Not Found\r\n\nuri: %s\nmeth: %s" uri meth in
-      Server.respond_string ~status:(`Code 404) ~body:ret_info ())
+      Server.respond_string ~flush:true ~status:(`Code 404) ~body:""
+        ~headers:(Header.of_list [("meth",meth); ("uri",uri)]) ())
 
 let make_server port =
   Server.create ~mode:(`TCP (`Port port)) (Server.make ~callback ())
