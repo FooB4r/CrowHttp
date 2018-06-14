@@ -262,7 +262,8 @@ let message_body = entity_body (* + encoded *)
 let authority_form = const "userinfo@host:1234"
 let absolute_uri = const "/absolutely/uri"
 let origin_form = absolute_uri ^^ const "?q=helloworld&t=ffab&ia=web"
-let request_target = choose [const "*"; origin_form; absolute_uri; authority_form]
+let myuri = const "img/camel.jpg"
+let request_target = choose [const "*"; origin_form; absolute_uri; authority_form; myuri]
 
 let extension_method = token
 let http_method = choose [const "OPTIONS"; const "GET"; const "HEAD"; const "POST";
