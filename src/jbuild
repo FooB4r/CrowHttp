@@ -1,0 +1,11 @@
+(jbuild_version 1)
+
+(executables
+ ((names (main cohttp_server))
+ (libraries (crowbar cohttp cohttp.lwt httpaf)))
+)
+
+(alias
+ ((name runtest)
+  (action (run ${exe:main.exe}))
+))

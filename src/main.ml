@@ -1,6 +1,3 @@
-open Cohttp_test
-open Httpaf_test
-
 type test_status = Parsing | Server | Response of int | Md5 of string | Success
 type mode = Overall | Step
 

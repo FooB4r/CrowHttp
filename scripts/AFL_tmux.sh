@@ -3,7 +3,7 @@
 set -eu
 
 aflfuzz=afl-fuzz
-executable=_build/default/main.exe
+executable=_build/default/src/main.exe
 
 ## parallelization
 cmd1="$aflfuzz -i input/ -o sync_dir/ -M fuzzer01 $executable @@"
