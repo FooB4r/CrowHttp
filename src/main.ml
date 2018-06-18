@@ -118,7 +118,7 @@ let test_httpaf conn req =
     (* List.iteri (fun i e -> Printf.eprintf "res[%d]: %s\n" i e) res; *)
     let len = String.length afres in
     if len > 0 then (
-      let shortResp = if (len > 100) then
+      let shortResp = if (len > 200) then
         (List.nth res 0)^"\n(body)..." else afres in
       debug ("Httpaf: "^(string_of_int len)^">"^shortResp);
       let code = Scanf.sscanf (List.hd res) "HTTP/%d.%d %d" (fun _ _ code -> code) in
@@ -138,7 +138,7 @@ let test_cohttp req =
     let (sresp, sbody) = string_of_coresponse (resp, body) in
     let len = (String.length sresp) + (String.length sbody) in
     if len > 0 then (
-      let shortResp = if (len > 100) then
+      let shortResp = if (len > 200) then
         sresp ^"\n(body)..." else sresp^sbody in
       debug ("Cohttp: "^(string_of_int len)^">"^shortResp);
       let code = match Cohttp.Response.status resp with

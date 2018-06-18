@@ -29,15 +29,18 @@ let handler got_eof reqd =
   let request = Reqd.request reqd in
   let headers = Headers.of_list [ ("meth",    Method.to_string request.meth);
                                   ("target",  request.target)] in
+  let goodReq = request.target = "img/camel.jpg" && request.meth = `GET in
   let response =
-    if request.target = "img/camel.jpg" && request.meth = `GET then
+    if goodReq then
       Response.create ~headers `OK
     else
       Response.create ~headers `Not_found
     in
   let response_body = Reqd.respond_with_streaming reqd response in
-  let body = bigstring_of_file "img/camel.jpg" in (*make it buffer by buffer*)
-  Body.write_bigstring response_body ~off:0 ~len:(Bigstring.length body) body;
+  if goodReq then begin
+    let body = bigstring_of_file "img/camel.jpg" in (*make it buffer by buffer*)
+    Body.write_bigstring response_body ~off:0 ~len:(Bigstring.length body) body
+  end;
   Body.close_writer response_body
 
 let request_to_string r =
