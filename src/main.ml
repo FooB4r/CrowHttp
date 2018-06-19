@@ -185,7 +185,7 @@ let () =
     debug (Part_gen.to_string req);
     debug "----------------------------------";
     let afstats = test_httpaf afserv req in
-    debug ("- - - - - - - - - - - - - - - - -");
+    debug ("");
     let costats = test_cohttp req in
     debug "----------------------------------";
     debug ("Cohttp: "^string_of_test_status costats);
