@@ -1,7 +1,7 @@
 open Httpaf
 
 let debug msg =
-  if false then Printf.eprintf "%s\n%!" msg
+  if true then Printf.eprintf "%s\n%!" msg
 
 let bigstring_append_string bs s =
   Bigstring.of_string (Bigstring.to_string bs ^ s)
@@ -40,7 +40,8 @@ let handler got_eof reqd =
   if goodReq then begin
     let body = bigstring_of_file "img/camel.jpg" in (*make it buffer by buffer*)
     Body.write_bigstring response_body ~off:0 ~len:(Bigstring.length body) body
-  end;
+  end else
+    Body.write_string response_body ~off:0 ~len:1 ""; (* ahem *)
   Body.close_writer response_body
 
 let request_to_string r =
