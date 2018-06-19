@@ -1,7 +1,7 @@
 open Httpaf
 
 let debug msg =
-  if true then Printf.eprintf "%s\n%!" msg
+  if false then Printf.eprintf "%s\n%!" msg
 
 let bigstring_append_string bs s =
   Bigstring.of_string (Bigstring.to_string bs ^ s)
