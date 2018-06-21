@@ -12,12 +12,11 @@ let httpaf_md5    = "img/afcamel.md5"
 let cohttp_target = "img/cocamel.recv.jpg"
 let cohttp_md5    = "img/cocamel.md5"
 
-let target = "img/camel.jpg"
-
 let m_request target = Part_gen.make_request
   ~meth:"GET" ~target ~version:"HTTP/1.1" ~headers:[("Connection", "close")]
 
-let good_request = m_request target
+let good_request = m_request "img/camel.jpg"
+let req404 = m_request "*"
 
 let debug msg =
   if !verbosity then Printf.eprintf "%s\n%!" msg
@@ -69,9 +68,14 @@ let eq_http response_str expected =
   String.equal fst_line expected
 
 let write_file filename msg =
-  (* Truncate file to 0 length if exist create if not *)
+  (* Truncate file to 0 length if exist & create if not *)
   let oc = open_out filename in
-  Printf.fprintf oc "%s" msg;
+  let rec _write bodyList =
+    match bodyList with
+    | h::t ->   Printf.fprintf oc "%s" h; _write t
+    | [] -> ()
+  in
+  _write msg;
   close_out oc (* flush and close *)
 
 let log_file req =
@@ -119,11 +123,11 @@ let test_httpaf conn req =
     let len = String.length afres in
     if len > 0 then (
       let shortResp = if (len > 200) then
-        (List.nth res 0)^"\n(body)..." else afres in
+        (List.hd res)^"\n(body)..." else afres in
       debug ("Httpaf: "^(string_of_int len)^">"^shortResp);
       let code = Scanf.sscanf (List.hd res) "HTTP/%d.%d %d" (fun _ _ code -> code) in
       if code = 404 then Response 404 else (
-        write_file httpaf_target (List.nth res 1);
+        write_file httpaf_target (List.tl res);
         if check_md5 httpaf_md5 then Success else Md5("NYI")
       )
     ) else (
@@ -147,7 +151,7 @@ let test_cohttp req =
         in
       if code = 404 then Response 404 else
       (
-        write_file cohttp_target sbody;
+        write_file cohttp_target [sbody];
         if check_md5 cohttp_md5 then Success else Md5("NYI")
       )
     ) else (

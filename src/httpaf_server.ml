@@ -23,9 +23,23 @@ let bigstring_of_file filename =
   close_in ic;
   file
 
+let stream_file conn filename =
+  let ic = open_in_bin filename in
+  let buffer = Bytes.create 1024 in
+  let rec _read conn =
+    let n = input ic buffer 0 1024 in
+    debug ("streaming "^ (string_of_int n)^ " bytes");
+    if n != 0 then (
+      let realdata = Bytes.sub buffer 0 n in
+      Body.write_string conn ~off:0 ~len:n (Bytes.to_string realdata);
+      _read conn)
+  in
+  _read conn;
+  close_in ic
+
 let handler got_eof reqd =
   (* let {meth; target; version; headers} = Reqd.request redq in *)
-  let request_body = Reqd.request_body reqd in
+  (* let request_body = Reqd.request_body reqd in *)
   let request = Reqd.request reqd in
   let headers = Headers.of_list [ ("meth",    Method.to_string request.meth);
                                   ("target",  request.target)] in
@@ -37,11 +51,11 @@ let handler got_eof reqd =
       Response.create ~headers `Not_found
     in
   let response_body = Reqd.respond_with_streaming reqd response in
-  if goodReq then begin
-    let body = bigstring_of_file "img/camel.jpg" in (*make it buffer by buffer*)
-    Body.write_bigstring response_body ~off:0 ~len:(Bigstring.length body) body
-  end else
-    Body.write_string response_body ~off:0 ~len:1 ""; (* ahem *)
+  (if goodReq then
+    stream_file response_body "img/camel.jpg"
+  else
+    Body.write_string response_body ~off:0 ~len:1 "" (* ahem no one saw that *)
+  );
   Body.close_writer response_body
 
 let request_to_string r =
