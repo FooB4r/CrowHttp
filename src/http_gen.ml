@@ -301,6 +301,8 @@ let request = (* Section 5 *)
 
 let response = const "Not yet implemented"
 
+let valid_meth = choose [const "HTTP/1.1"; const "HTTP/1.0"]
+
 (* split the string s at the index n *)
 let split_at s index =
   let length = String.length s in

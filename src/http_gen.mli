@@ -10,6 +10,8 @@ val request : string gen
 
 val response: string gen
 
+val valid_meth : string gen
+
 val concat_headers    : (string * string) list -> string
 val concat_headers_gen: (string * string) list gen -> string gen
 
