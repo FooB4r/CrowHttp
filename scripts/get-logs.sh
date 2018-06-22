@@ -7,7 +7,15 @@ output_dir=output
 output_log_dir="$output_dir/log"  # where do i log
 crash_dir="$output_dir/crashes"   # where do i get crashes
 hang_dir="$output_dir/hangs"      # where do i get hangs
-executable='_build/default/src/main.exe -v'
+build_dir='_build/default/src'
+executable="$build_dir/main.exe -v"
+printexec="$build_dir/printer.exe" # Only prints to avoid hanging
+server="$build_dir/cohttp_server.exe"
+
+# building the executables
+opam config exec -- jbuilder build src/main.exe
+opam config exec -- jbuilder build src/cohttp_server.exe
+opam config exec -- jbuilder build src/printer.exe
 
 if [ ! -d "$output_dir" ]; then
   echo "Error: No output directory in $(pwd)"
@@ -18,6 +26,9 @@ fi
 if [ ! -d "$output_log_dir" ]; then
   mkdir "$output_log_dir"
 fi
+
+$server &
+pid="$!"
 
 # Logging / pretty printing the crashes from $executable stderr
 if [ ! -d "$crash_dir" ]; then
@@ -32,6 +43,8 @@ else
   done
 fi
 
+kill -15 "$pid"
+
 # Logging / pretty printing the hangs from $executable stderr
 if [ ! -d "$hang_dir" ]; then
   echo "Warning: No output/hangs in $(pwd), not logging hangs"
@@ -41,6 +54,6 @@ else
     output_file="$output_log_dir/$filename"
     echo "$filename" > "$output_file"
     printf "HANG\\n" >> "$output_file"
-    eval "$executable $hang_dir/$filename" 2>> "$output_file" || true
+    eval "$printexec $hang_dir/$filename" 2>> "$output_file" || true
   done
 fi
