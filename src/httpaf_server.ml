@@ -37,7 +37,7 @@ let stream_file conn filename =
   _read conn;
   close_in ic
 
-let handler got_eof reqd =
+let handler reqd =
   (* let {meth; target; version; headers} = Reqd.request redq in *)
   (* let request_body = Reqd.request_body reqd in *)
   let request = Reqd.request reqd in
@@ -147,7 +147,7 @@ let test_server ~conn ~input () =
   in
   loop conn bigstring_empty reads (*|> String.concat ""*)
 
-let create_connection () = Server_connection.create (handler (ref false))
+let create_connection () = Server_connection.create handler
 
 let test_request conn req =
   test_server ~conn ~input:[req] ()

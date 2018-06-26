@@ -159,6 +159,31 @@ let test_cohttp req =
     )
   | None -> Parsing
 
+let unit_tests = [
+
+]
+
+let rec test_units tests =
+  let afserv = Httpaf_server.create_connection () in
+  match tests with
+  | req::t ->
+    verbosity := false;
+    let afstats = test_httpaf afserv req in
+    let costats = test_cohttp req in
+    verbosity := true;
+    let success = match checkMode with
+    | Overall -> check_overall costats afstats
+    | Step    -> check_by_step costats afstats
+    in
+    if not success then (
+      debug ">BUG : ";
+      debug (Part_gen.to_string req);
+      debug ("Cohttp: "^string_of_test_status costats);
+      debug ("Httpaf: "^string_of_test_status afstats)
+    );
+    test_units t
+  | [] -> ()
+
 let print_help () =
   Printf.printf "%s\n" Sys.argv.(0);
   Printf.printf "Usage %s [OPTION]\n" Sys.argv.(0);
@@ -182,6 +207,8 @@ let () =
   let headers = Http_gen.headers in
   let afserv = Httpaf_server.create_connection () in
   (* Cohttp_server.create_server portNumber; *)
+  debug (">>>>>>>> Unit Tests <<<<<<<<");
+  test_units unit_tests;
   Crowbar.add_test ~name:"http" [meth; target; version; headers] @@
   (fun meth target version headers ->
     let req = Part_gen.make_request ~meth ~target ~version ~headers in
@@ -198,4 +225,4 @@ let () =
     | Overall -> check_overall costats afstats
     | Step    -> check_by_step costats afstats
     in Crowbar.check success
-  );
+  )
