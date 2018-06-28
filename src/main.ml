@@ -204,7 +204,6 @@ let () =
   let target = Http_gen.uri in
   let version = Http_gen.version in
   let headers = Http_gen.headers in
-  (* let afserv = Httpaf_server.create_connection () in *)
   (* Cohttp_server.create_server portNumber; *)
   debug (">>>>>>>> Unit Tests <<<<<<<<");
   test_units unit_tests;
