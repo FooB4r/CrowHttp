@@ -113,11 +113,11 @@ let check_by_step costats afstats =
   | Response(c1), Response(c2) -> (c1 = c2)
   | afs, cos -> afs = cos
 
-let test_httpaf conn req =
+let test_httpaf req =
   let afreq = Part_gen.httpaf_request_opt req in
   match afreq with
   | Some req ->
-    let res = Httpaf_server.test_request conn (`Request req, `Empty) in
+    let res = Httpaf_server.test_request (`Request req, `Empty) in
     let afres = String.concat "" res in
     (* List.iteri (fun i e -> Printf.eprintf "res[%d]: %s\n" i e) res; *)
     let len = String.length afres in
@@ -164,11 +164,10 @@ let unit_tests = [
 ]
 
 let rec test_units tests =
-  let afserv = Httpaf_server.create_connection () in
   match tests with
   | req::t ->
     verbosity := false;
-    let afstats = test_httpaf afserv req in
+    let afstats = test_httpaf req in
     let costats = test_cohttp req in
     verbosity := true;
     let success = match checkMode with
@@ -205,17 +204,18 @@ let () =
   let target = Http_gen.uri in
   let version = Http_gen.version in
   let headers = Http_gen.headers in
-  let afserv = Httpaf_server.create_connection () in
+  (* let afserv = Httpaf_server.create_connection () in *)
   (* Cohttp_server.create_server portNumber; *)
   debug (">>>>>>>> Unit Tests <<<<<<<<");
   test_units unit_tests;
+  debug "xxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
   Crowbar.add_test ~name:"http" [meth; target; version; headers] @@
   (fun meth target version headers ->
     let req = Part_gen.make_request ~meth ~target ~version ~headers in
     debug "===========TEST REQUEST===========";
     debug (Part_gen.to_string req);
     debug "----------------------------------";
-    let afstats = test_httpaf afserv req in
+    let afstats = test_httpaf req in
     debug ("");
     let costats = test_cohttp req in
     debug "----------------------------------";

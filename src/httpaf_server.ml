@@ -1,27 +1,12 @@
 open Httpaf
 
 let debug msg =
-  if false then Printf.eprintf "%s\n%!" msg
+  if true then Printf.eprintf "%s\n%!" msg
 
 let bigstring_append_string bs s =
   Bigstring.of_string (Bigstring.to_string bs ^ s)
 
 let bigstring_empty = Bigstring.of_string ""
-
-(* to improve *)
-let bigstring_of_file filename =
-  let ic = open_in_bin filename in (* open as binary *)
-  let buffer = Bytes.create 1024 in
-  let rec read_file bsbuf =
-    let n = input ic buffer 0 1024 in
-    if n = 0 then bsbuf else
-      let rbuf = Bytes.sub buffer 0 n in
-      let bs = bigstring_append_string bsbuf (Bytes.to_string rbuf) in
-      read_file bs
-  in
-  let file = read_file bigstring_empty in
-  close_in ic;
-  file
 
 let stream_file conn filename =
   let ic = open_in_bin filename in
@@ -84,9 +69,10 @@ let case_to_strings = function
 let iovec_to_string { IOVec.buffer; off; len } =
   Bigstring.to_string ~off ~len buffer
 
-let test_server ~conn ~input () =
+let test_server ~input () =
   let reads  = List.(concat (map case_to_strings input)) in
   let iwait, owait = ref false, ref false in
+  let conn = Server_connection.create handler in
   let rec loop conn input reads =
     if !iwait && !owait then
       assert false (* deadlock, at lest for test handlers. *);
@@ -147,7 +133,5 @@ let test_server ~conn ~input () =
   in
   loop conn bigstring_empty reads (*|> String.concat ""*)
 
-let create_connection () = Server_connection.create handler
-
-let test_request conn req =
-  test_server ~conn ~input:[req] ()
+let test_request req =
+  test_server ~input:[req] ()
